@@ -147,17 +147,26 @@ class Handler
     public function generateSettings()
     {
         return "\n/**\n * START SHEPHERD CONFIG\n */\n" .
-            "\$databases['default']['default'] = array (\n" .
-            "  'database' => getenv('DATABASE_NAME') ?: 'drupal',\n" .
-            "  'username' => getenv('DATABASE_USER') ?: 'user',\n" .
-            "  'password' => getenv('DATABASE_PASSWORD_FILE') ? file_get_contents(getenv('DATABASE_PASSWORD_FILE')) : 'password',\n" .
-            "  'host' => getenv('DATABASE_HOST') ?: '127.0.0.1',\n" .
-            "  'port' => getenv('DATABASE_PORT') ?: '3306',\n" .
-            "  'driver' => getenv('DATABASE_DRIVER') ?: 'mysql',\n" .
-            "  'prefix' => getenv('DATABASE_PREFIX') ?: '',\n" .
-            "  'collation' => getenv('DATABASE_COLLATION') ?: 'utf8mb4_general_ci',\n" .
-            "  'namespace' => getenv('DATABASE_NAMESPACE') ?: 'Drupal\\\\Core\\\\Database\\\\Driver\\\\mysql',\n" .
-            ");\n" .
+            "// Allow using an sqlite db for testing etc.\n" .
+            "if (getenv('SQLITE_DATABASE')) {\n" .
+            "  \$databases['default']['default'] = [\n" .
+            "    'driver' => 'sqlite',\n" .
+            "    'database' => getenv('SQLITE_DATABASE'),\n" .
+            "  ];\n" .
+            "}\n" .
+            "else {\n" .
+            "  \$databases['default']['default'] = array (\n" .
+            "    'database' => getenv('DATABASE_NAME') ?: 'drupal',\n" .
+            "    'username' => getenv('DATABASE_USER') ?: 'user',\n" .
+            "    'password' => getenv('DATABASE_PASSWORD_FILE') ? file_get_contents(getenv('DATABASE_PASSWORD_FILE')) : 'password',\n" .
+            "    'host' => getenv('DATABASE_HOST') ?: '127.0.0.1',\n" .
+            "    'port' => getenv('DATABASE_PORT') ?: '3306',\n" .
+            "    'driver' => getenv('DATABASE_DRIVER') ?: 'mysql',\n" .
+            "    'prefix' => getenv('DATABASE_PREFIX') ?: '',\n" .
+            "    'collation' => getenv('DATABASE_COLLATION') ?: 'utf8mb4_general_ci',\n" .
+            "    'namespace' => getenv('DATABASE_NAMESPACE') ?: 'Drupal\\\\Core\\\\Database\\\\Driver\\\\mysql',\n" .
+            "  );\n" .
+            "}\n" .
             "\$settings['file_private_path'] = getenv('PRIVATE_DIR') ?: '/shared/private';\n" .
             "\$settings['file_temporary_path'] = getenv('TMP_DIR') ?: '/shared/tmp';\n" .
             "\$settings['hash_salt'] = getenv('HASH_SALT') ?: '" . str_replace(['+', '/', '='], ['-', '_', ''], base64_encode(random_bytes(55))) . "';\n" .
