@@ -19,14 +19,15 @@ services:
       DATABASE_USER: user
       DATABASE_PASSWORD: password
       HASH_SALT: random-hash
-      MEMCACHE_ENABLED: 1
+      MEMCACHE_ENABLED: 0
       MEMCACHE_HOST: memcached
       PHP_IDE_CONFIG: serverName=${PROJECT}.${DOMAIN}
       PUBLIC_DIR: /shared/public
       REDIS_ENABLED: 0
       REDIS_HOST: redis
       SHEPHERD_SITE_ID: 2
-      SHEPHERD_INSTALL_PROFILE: ua
+      # Define this in an env var based on what you are installing.
+      # SHEPHERD_INSTALL_PROFILE:
       SHEPHERD_SECRET_PATH: /code/private
       SHEPHERD_TOKEN: super-secret-token
       SHEPHERD_URL: http://shepherd.test
