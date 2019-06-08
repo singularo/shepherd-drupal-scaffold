@@ -1,5 +1,5 @@
 {
-    "name": "universityofadelaide/shepherd-drupal-scaffold",
+    "name": "singularo/shepherd-drupal-scaffold",
     "description": "Composer Plugin for updating the Shepherd Drupal tools.",
     "type": "composer-plugin",
     "license": "GPL-2.0+",

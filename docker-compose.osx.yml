@@ -20,15 +20,16 @@ services:
     environment:
       CONFIG_SYNC_DIRECTORY: /shared/private/random-hash/sync
       HASH_SALT: random-hash
-      MEMCACHE_ENABLED: 1
+      MEMCACHE_ENABLED: 0
       PUBLIC_DIR: /shared/public
       REDIS_ENABLED: 0
-      SHEPHERD_INSTALL_PROFILE: ua
+      # Define this in an env var based on what you are installing.
+      # SHEPHERD_INSTALL_PROFILE:
       SHEPHERD_SITE_ID: 2
       SHEPHERD_SECRET_PATH: /code/private
       SHEPHERD_TOKEN: super-secret-token
-      SHEPHERD_URL: http://shepherd.test
-      SITE_TITLE: WCMS D8
+      SHEPHERD_URL: http://localhost
+      SITE_TITLE: Drupal site
       SITE_MAIL: site@example.com
       SITE_ADMIN_EMAIL: admin@example.com
       SITE_ADMIN_USERNAME: admin
