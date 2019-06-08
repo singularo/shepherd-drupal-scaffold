@@ -85,8 +85,8 @@ class Handler
                 'drush/config-ignore.yml',
                 'phpcs.xml',
                 'RoboFile.php',
-                'standalone-memcached.xml',
-                'Dockerfile',
+                'docker/standalone-memcached.xml',
+                'docker/Dockerfile',
             ]
         );
     }
