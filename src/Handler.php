@@ -295,7 +295,7 @@ class Handler
      */
     public function getPackagePath()
     {
-        $packagePath = $this->getVendorPath() . '/universityofadelaide/shepherd-drupal-scaffold';
+        $packagePath = $this->getVendorPath() . '/singularo/shepherd-drupal-scaffold';
         return $packagePath;
     }
 
