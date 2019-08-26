@@ -8,13 +8,10 @@ services:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
     image: uofa/s2i-shepherd-drupal-dev
-    # Chrome webdriver requires this - used for tests.
-    privileged: true
     hostname: ${PROJECT}
     ports:
       - "80:8080"
     environment:
-      CONFIG_SYNC_DIRECTORY: /shared/private/random-hash/sync
       DATABASE_HOST: db
       DATABASE_USER: user
       DATABASE_PASSWORD: password
@@ -23,8 +20,9 @@ services:
       MEMCACHE_HOST: memcached
       PHP_IDE_CONFIG: serverName=${PROJECT}.${DOMAIN}
       PUBLIC_DIR: /shared/public
-      REDIS_ENABLED: 0
+      REDIS_ENABLED: 1
       REDIS_HOST: redis
+      # REDIS_PASSWORD: testing
       SHEPHERD_SITE_ID: 2
       # Define this in an env var based on what you are installing.
       # SHEPHERD_INSTALL_PROFILE:
@@ -36,6 +34,7 @@ services:
       SITE_ADMIN_EMAIL: admin@example.com
       SITE_ADMIN_USERNAME: admin
       SITE_ADMIN_PASSWORD: password
+      SSH_AUTH_SOCK: /ssh/ssh
       # Allow linux users to use jwilder/nginx-proxy
       VIRTUAL_HOST: ${PROJECT}.${DOMAIN}
       # Do not define this as '/' or apache2 will give strange behaviour, to test locally,
@@ -68,23 +67,23 @@ services:
 
   redis:
     image: redis:alpine
+    command: |
+      redis-server
+      --maxmemory 512Mi
+      --maxmemory-policy allkeys-lru
+      --save ""
+    # --requirepass password
     networks:
       - default
 
-  memcached:
-    image: jboss/infinispan-server:9.4.11.Final
-    ports:
-      - "9990:9990"
-    environment:
-      APP_USER: user
-      APP_PASS: pass
-      MGMT_USER: admin
-      MGMT_PASS: admin
-    entrypoint:
-      - docker-entrypoint.sh
-      - -c
-      - standalone-memcached.xml
+- memcached:
+-   image: memcached:alpine
+    networks:
+      - default
+
+  selenium:
+    image: selenium/standalone-chrome:3.141.59-oxygen
     volumes:
-      - ./standalone-memcached.xml:/opt/jboss/infinispan-server/standalone/configuration/standalone-memcached.xml
+      - /dev/shm:/dev/shm
     networks:
       - default

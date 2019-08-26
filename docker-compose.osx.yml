@@ -18,13 +18,13 @@ services:
       - "9990:9990"
       - "11211:11211"
     environment:
-      CONFIG_SYNC_DIRECTORY: /shared/private/random-hash/sync
       HASH_SALT: random-hash
       MEMCACHE_ENABLED: 0
+      PHP_IDE_CONFIG: serverName=localhost
       PUBLIC_DIR: /shared/public
-      REDIS_ENABLED: 0
       # Define this in an env var based on what you are installing.
       # SHEPHERD_INSTALL_PROFILE:
+      REDIS_ENABLED: 1
       SHEPHERD_SITE_ID: 2
       SHEPHERD_SECRET_PATH: /code/private
       SHEPHERD_TOKEN: super-secret-token
@@ -34,7 +34,6 @@ services:
       SITE_ADMIN_EMAIL: admin@example.com
       SITE_ADMIN_USERNAME: admin
       SITE_ADMIN_PASSWORD: password
-      PHP_IDE_CONFIG: serverName=localhost
       XDEBUG_CONFIG: "remote_host=docker.for.mac.localhost"
     volumes:
       - nfsmount:/code
@@ -62,22 +61,25 @@ services:
 
   redis:
     image: redis:alpine
+    command: |
+      redis-server
+      --maxmemory 512Mi
+      --maxmemory-policy allkeys-lru
+      --save ""
+    # --requirepass password
     network_mode: service:web
 
-  memcached:
-    image: jboss/infinispan-server:9.4.11.Final
-    environment:
-      APP_USER: user
-      APP_PASS: pass
-      MGMT_USER: admin
-      MGMT_PASS: admin
-    entrypoint:
-      - docker-entrypoint.sh
-      - -c
-      - standalone-memcached.xml
-    volumes:
-      - ./standalone-memcached.xml:/opt/jboss/infinispan-server/standalone/configuration/standalone-memcached.xml
+- memcached:
+-   image: memcached:alpine
+    networks:
+      - default
     network_mode: service:web
+
+  selenium:
+    image: selenium/standalone-chrome:3.141.59-oxygen
+    network_mode: service:web
+    volumes:
+      - /dev/shm:/dev/shm
 
 volumes:
   nfsmount:
