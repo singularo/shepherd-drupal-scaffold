@@ -219,7 +219,7 @@ class Handler
             "  \$settings['reverse_proxy_forwarded_header'] = getenv('SHEPHERD_REVERSE_PROXY_FORWARDED_HEADER') ?: 'FORWARDED';\n" .
             "}\n" .
             "if (getenv('TRUSTED_HOST_PATTERNS')) {\n" .
-            "  \$settings['trusted_host_patterns'] = !empty(getenv('TRUSTED_HOST_PATTERNS')) ? explode(',', getenv('TRUSTED_HOST_PATTERNS'));\n" .
+            "  \$settings['trusted_host_patterns'] = !empty(getenv('TRUSTED_HOST_PATTERNS')) ? explode(',', getenv('TRUSTED_HOST_PATTERNS')) : [];\n" .
             "}\n" .
             "/**\n * END SHEPHERD CONFIG\n */\n" .
             "\n" .
