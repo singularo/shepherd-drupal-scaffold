@@ -20,7 +20,7 @@ services:
       MEMCACHE_HOST: memcached
       PHP_IDE_CONFIG: serverName=${PROJECT}.${DOMAIN}
       PUBLIC_DIR: /shared/public
-      REDIS_ENABLED: 1
+      REDIS_ENABLED: 0
       REDIS_HOST: redis
       # REDIS_PASSWORD: testing
       SHEPHERD_SITE_ID: 2
@@ -41,6 +41,9 @@ services:
       # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
       # WEB_PATH: /subpath
       XDEBUG_CONFIG: "remote_host=172.17.0.1"
+
+      # Local variables
+      SHEPHERD_INSTALL_PROFILE: standard
     volumes:
       - .:/code
       - ./shared:/shared

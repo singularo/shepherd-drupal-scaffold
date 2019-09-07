@@ -24,7 +24,7 @@ services:
       PUBLIC_DIR: /shared/public
       # Define this in an env var based on what you are installing.
       # SHEPHERD_INSTALL_PROFILE:
-      REDIS_ENABLED: 1
+      REDIS_ENABLED: 0
       SHEPHERD_SITE_ID: 2
       SHEPHERD_SECRET_PATH: /code/private
       SHEPHERD_TOKEN: super-secret-token
@@ -35,6 +35,9 @@ services:
       SITE_ADMIN_USERNAME: admin
       SITE_ADMIN_PASSWORD: password
       XDEBUG_CONFIG: "remote_host=docker.for.mac.localhost"
+
+      # Local variables
+      SHEPHERD_INSTALL_PROFILE: standard
     volumes:
       - nfsmount:/code
       - ./shared:/shared
