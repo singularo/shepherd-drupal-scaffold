@@ -69,8 +69,8 @@ services:
     # --requirepass password
     network_mode: service:web
 
-- memcached:
--   image: memcached:alpine
+  memcached:
+    image: memcached:alpine
     networks:
       - default
     network_mode: service:web

@@ -76,8 +76,8 @@ services:
     networks:
       - default
 
-- memcached:
--   image: memcached:alpine
+  memcached:
+    image: memcached:alpine
     networks:
       - default
 
