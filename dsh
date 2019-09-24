@@ -47,6 +47,9 @@ fi
 # Command: ./dsh start
 # Configures environment then brings up project using docker-compose.yml file.
 dsh_start() {
+  # Make the shared directory to avoid permission issues from docker.
+  mkdir -p ./shared
+
   notice "Starting project containers."
   docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
   export URL="http://127.0.0.1"
