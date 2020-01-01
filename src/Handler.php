@@ -194,9 +194,11 @@ class Handler
             "  }\n" .
             "}\n" .
             "if (getenv('MEMCACHE_ENABLED')) {\n" .
-            "  \$settings['memcache']['servers'] = [getenv('MEMCACHE_HOST') . ':11211' => 'default'] ?: ['127.0.0.1:11211' => 'default'];\n" .
+            "  \$memcache_host = getenv('MEMCACHE_HOST') ?: '127.0.0.1';\n" .
+            "  \$memcache_port = getenv('MEMCACHE_PORT') ?: '11211';\n" .
+            "  \$settings['memcache']['servers'] = [\$memcache_host . ':' . \$memcache_port => 'default'];\n" .
             "  \$settings['memcache']['bins'] = ['default' => 'default'];\n" .
-            "  \$settings['memcache']['key_prefix'] = '';\n" .
+            "  \$settings['memcache']['key_prefix'] = getenv('MEMCACHE_PREFIX') ?: '';\n" .
             "  // If we're not installing, include the memcache services.\n" .
             "  if (!isset(\$GLOBALS['install_state'])) {\n" .
             "    \$settings['cache']['default'] = 'cache.backend.memcache';\n" .
