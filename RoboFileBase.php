@@ -474,7 +474,7 @@ abstract class RoboFileBase extends \Robo\Tasks {
    * @see https://github.com/previousnext/drush_cmi_tools
    */
   public function configImportPlus() {
-    if (file_exists('web/modules/contrib/drush-cmi-tools/drush_cmi_tools.info.yml')) {
+    if (file_exists('web/modules/contrib/drush_cmi_tools/drush_cmi_tools.info.yml')) {
       $this->_exec("$this->drush_cmd cimy -y --source=$this->configDir --install=$this->configInstallDir --delete-list=$this->configDeleteList");
     }
     else {
@@ -490,7 +490,7 @@ abstract class RoboFileBase extends \Robo\Tasks {
    * @see https://github.com/previousnext/drush_cmi_tools
    */
   public function configExportPlus() {
-    if (file_exists('web/modules/contrib/drush-cmi-tools/drush_cmi_tools.info.yml')) {
+    if (file_exists('web/modules/contrib/drush_cmi_tools/drush_cmi_tools.info.yml')) {
       $this->_exec("$this->drush_cmd cexy -y --destination=$this->configDir --ignore-list=$this->configIgnoreList");
     }
     else {
