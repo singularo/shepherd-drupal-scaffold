@@ -1,10 +1,10 @@
 <?php
 /**
  * @file
- * Contains UniversityOfAdelaide\ShepherdDrupalScaffold\Plugin.
+ * Contains Singularo\ShepherdDrupalScaffold\Plugin.
  */
 
-namespace UniversityOfAdelaide\ShepherdDrupalScaffold;
+namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
 use Composer\EventDispatcher\EventSubscriberInterface;
@@ -20,7 +20,7 @@ class Plugin implements PluginInterface, EventSubscriberInterface
 {
 
     /**
-     * @var \UniversityOfAdelaide\ShepherdDrupalScaffold\Handler
+     * @var \Singularo\ShepherdDrupalScaffold\Handler
      */
     protected $handler;
 

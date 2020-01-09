@@ -15,10 +15,10 @@
     },
     "autoload": {
         "psr-4": {
-            "UniversityOfAdelaide\\ShepherdDrupalScaffold\\": "src/"
+            "Singularo\\ShepherdDrupalScaffold\\": "src/"
         }
     },
     "extra": {
-        "class": "UniversityOfAdelaide\\ShepherdDrupalScaffold\\Plugin"
+        "class": "Singularo\\ShepherdDrupalScaffold\\Plugin"
     }
 }

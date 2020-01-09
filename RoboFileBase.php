@@ -258,13 +258,15 @@ abstract class RoboFileBase extends \Robo\Tasks {
    */
   public function buildClean() {
     $this->setPermissions("$this->application_root/sites/default", '0755');
-    $this->_exec("rm -fR $this->application_root/core");
-    $this->_exec("rm -fR $this->application_root/modules/contrib");
-    $this->_exec("rm -fR $this->application_root/profiles/contrib");
-    $this->_exec("rm -fR $this->application_root/themes/contrib");
-    $this->_exec("rm -fR $this->application_root/sites/all");
-    $this->_exec("rm -fR bin");
-    $this->_exec("rm -fR vendor");
+    $this->taskExecStack()
+      ->exec("rm -fR $this->application_root/core")
+      ->exec("rm -fR $this->application_root/modules/contrib")
+      ->exec("rm -fR $this->application_root/profiles/contrib")
+      ->exec("rm -fR $this->application_root/themes/contrib")
+      ->exec("rm -fR $this->application_root/sites/all")
+      ->exec("rm -fR bin")
+      ->exec("rm -fR vendor")
+      ->run();
   }
 
   /**
@@ -397,9 +399,7 @@ abstract class RoboFileBase extends \Robo\Tasks {
       ->run()
       ->getMessage();
 
-    $results_array = explode("\n", $results);
-
-    return $results_array;
+    return explode("\n", $results);
   }
 
   /**
@@ -434,7 +434,7 @@ abstract class RoboFileBase extends \Robo\Tasks {
       }
 
       // Never sync the extension file, it breaks things.
-      if (stristr($line, 'core.extension.yml')) {
+      if (stripos($line, 'core.extension.yml') !== FALSE) {
         continue;
       }
 
@@ -474,7 +474,7 @@ abstract class RoboFileBase extends \Robo\Tasks {
    * @see https://github.com/previousnext/drush_cmi_tools
    */
   public function configImportPlus() {
-    if (file_exists('web/modules/contrib/drush_cmi_tools/drush_cmi_tools.info.yml')) {
+    if (file_exists('/code/web/modules/contrib/drush_cmi_tools/drush_cmi_tools.info.yml')) {
       $this->_exec("$this->drush_cmd cimy -y --source=$this->configDir --install=$this->configInstallDir --delete-list=$this->configDeleteList");
     }
     else {
@@ -490,7 +490,7 @@ abstract class RoboFileBase extends \Robo\Tasks {
    * @see https://github.com/previousnext/drush_cmi_tools
    */
   public function configExportPlus() {
-    if (file_exists('web/modules/contrib/drush_cmi_tools/drush_cmi_tools.info.yml')) {
+    if (file_exists('/code/web/modules/contrib/drush_cmi_tools/drush_cmi_tools.info.yml')) {
       $this->_exec("$this->drush_cmd cexy -y --destination=$this->configDir --ignore-list=$this->configIgnoreList");
     }
     else {
@@ -597,11 +597,13 @@ abstract class RoboFileBase extends \Robo\Tasks {
    */
   public function devImportDb($sql_file) {
     $start = new DateTime();
-    $this->_exec("$this->drush_cmd -y sql-drop");
-    $this->_exec("$this->drush_cmd sqlq --file=$sql_file");
-    $this->_exec("$this->drush_cmd cr");
-    $this->_exec("$this->drush_cmd upwd admin --password=password");
-    $this->_exec("$this->drush_cmd updb --entity-updates -y");
+    $this->taskExecStack()
+      ->exec("$this->drush_cmd -y sql-drop")
+      ->exec("$this->drush_cmd sqlq --file=$sql_file")
+      ->exec("$this->drush_cmd cr")
+      ->exec("$this->drush_cmd upwd admin --password=password")
+      ->exec("$this->drush_cmd updb --entity-updates -y")
+      ->run();
     $this->say('Duration: ' . date_diff(new DateTime(), $start)->format('%im %Ss'));
     $this->say('Database imported, admin user password is : password');
   }

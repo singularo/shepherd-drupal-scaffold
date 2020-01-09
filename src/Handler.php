@@ -1,6 +1,6 @@
 <?php
 
-namespace UniversityOfAdelaide\ShepherdDrupalScaffold;
+namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
@@ -298,7 +298,7 @@ class Handler
     /**
      * Get the path to the package directory.
      *
-     * E.g. /home/user/code/project/vendor/universityofadelaide/shepherd-drupal-scaffold
+     * E.g. /home/user/code/project/vendor/singularo/shepherd-drupal-scaffold
      *
      * @return string
      */
