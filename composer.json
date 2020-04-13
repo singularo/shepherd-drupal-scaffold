@@ -24,7 +24,11 @@
     "class": "Singularo\\ShepherdDrupalScaffold\\Plugin",
     "drupal-scaffold": {
       "file-mapping": {
+        "docker-compose.linux.yml": "assets/docker-compose.linux.yml",
+        "docker-compose.osx.yml": "assets/docker-compose.osx.yml",
         "dsh": "assets/dsh",
+        "dsh_bash": "assets/dsh_bash",
+        "RoboFile.php": "assets/RoboFile.php",
         "RoboFileBase.php": "assets/RoboFileBase.php"
       }
     }
