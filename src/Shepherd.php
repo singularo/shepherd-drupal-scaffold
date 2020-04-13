@@ -99,7 +99,7 @@ class Shepherd {
       "  );\n" .
       "}\n" .
       "\$settings['file_private_path'] = getenv('PRIVATE_DIR') ?: '/shared/private';\n" .
-      "\$settings['file_temporary_path'] = getenv('TMP_DIR') ?: '/shared/tmp';\n" .
+      "\$settings['file_temp_path'] = getenv('TMP_DIR') ?: '/shared/tmp';\n" .
       "\$settings['hash_salt'] = getenv('HASH_SALT') ?: '" . str_replace(['+', '/', '='], [
         '-',
         '_',

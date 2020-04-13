@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ruleset name="uoa">
-  <description>Default PHP CodeSniffer configuration for UoA projects.</description>
+  <description>Default PHP CodeSniffer configuration for Shepherd projects.</description>
   <!-- folders to scan -->
   <file>./web/modules/custom</file>
+  <file>./web/modules/contrib</file>
   <file>./web/profiles</file>
   <file>./web/themes</file>
   <exclude-pattern>*md</exclude-pattern>
+  <exclude-pattern>*css</exclude-pattern>
+  <exclude-pattern>*min.js</exclude-pattern>
+  <exclude-pattern>*vendor/*.js</exclude-pattern>
+  <exclude-pattern>*plugins/*.js</exclude-pattern>
+  <exclude-pattern>*dist/*.js</exclude-pattern>
   <!-- additional arguments -->
   <arg name="report" value="full"/>
   <!-- inherit from coder -->
