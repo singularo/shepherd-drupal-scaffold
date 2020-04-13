@@ -12,24 +12,59 @@
   "require-dev": {
     "roave/security-advisories": "dev-master"
   },
-  "config": {
-    "bin-dir": "bin/"
-  },
   "autoload": {
     "psr-4": {
       "Singularo\\ShepherdDrupalScaffold\\": "src/"
     }
   },
   "extra": {
-    "class": "Singularo\\ShepherdDrupalScaffold\\Plugin",
+    "class": "Singularo\\ShepherdDrupalScaffold\\ShepherdPlugin",
     "drupal-scaffold": {
       "file-mapping": {
-        "docker-compose.linux.yml": "assets/docker-compose.linux.yml",
-        "docker-compose.osx.yml": "assets/docker-compose.osx.yml",
-        "dsh": "assets/dsh",
-        "dsh_bash": "assets/dsh_bash",
-        "RoboFile.php": "assets/RoboFile.php",
-        "RoboFileBase.php": "assets/RoboFileBase.php"
+        "[project-root]/docker-compose.linux.yml": {
+          "path": "assets/docker-compose.linux.yml",
+          "overwrite": false
+        },
+        "[project-root]/docker-compose.osx.yml": {
+          "path": "assets/docker-compose.osx.yml",
+          "overwrite": false
+        },
+        "[project-root]/docker/Dockerfile": {
+          "path": "assets/docker/Dockerfile",
+          "overwrite": false
+        },
+        "[project-root]/docker/xdebug.ini": {
+          "path": "assets/docker/xdebug.ini",
+          "overwrite": false
+        },
+        "[project-root]/drush/config-delete.yml": {
+          "path" : "assets/drush/config-delete.yml",
+          "overwrite": false
+        },
+        "[project-root]/drush/config-ignore.html": {
+          "path": "assets/drush/config-ignore.yml",
+          "overwrite": false
+        },
+        "[project-root]/dsh_bash": {
+          "path": "assets/dsh_bash",
+          "overwrite": false
+        },
+        "[project-root]/phpcs.xml": {
+          "path": "assets/phpcs.xml",
+          "overwrite": false
+        },
+        "[project-root]/RoboFile.php": {
+          "path": "assets/RoboFile.php",
+          "overwrite": false
+        },
+        "[project-root]/dsh": {
+          "path": "assets/dsh",
+          "overwrite": true
+        },
+        "[project-root]/RoboFileBase.php": {
+          "path": "assets/RoboFileBase.php",
+          "overwrite": true
+        }
       }
     }
   }
