@@ -1,24 +1,32 @@
 {
-    "name": "singularo/shepherd-drupal-scaffold",
-    "description": "Composer Plugin for updating the Shepherd Drupal tools.",
-    "type": "composer-plugin",
-    "license": "GPL-2.0+",
-    "require": {
-        "php": ">=7.0",
-        "composer-plugin-api": "^1.1",
-        "composer/semver": "^1.4",
-        "drupal-composer/drupal-scaffold": "^2.2",
-        "symfony/filesystem": "~3.0"
-    },
-    "config": {
-        "bin-dir": "bin/"
-    },
-    "autoload": {
-        "psr-4": {
-            "Singularo\\ShepherdDrupalScaffold\\": "src/"
-        }
-    },
-    "extra": {
-        "class": "Singularo\\ShepherdDrupalScaffold\\Plugin"
+  "name": "singularo/shepherd-drupal-scaffold",
+  "description": "Composer Plugin for updating the Shepherd Drupal tools.",
+  "type": "composer-plugin",
+  "license": "GPL-2.0+",
+  "require": {
+    "php": ">=7.2",
+    "composer-plugin-api": "^1.1",
+    "composer/semver": "^1.4",
+    "symfony/filesystem": "~3.0"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-master"
+  },
+  "config": {
+    "bin-dir": "bin/"
+  },
+  "autoload": {
+    "psr-4": {
+      "Singularo\\ShepherdDrupalScaffold\\": "src/"
     }
+  },
+  "extra": {
+    "class": "Singularo\\ShepherdDrupalScaffold\\Plugin",
+    "drupal-scaffold": {
+      "file-mapping": {
+        "dsh": "assets/dsh",
+        "RoboFileBase.php": "assets/RoboFileBase.php"
+      }
+    }
+  }
 }
