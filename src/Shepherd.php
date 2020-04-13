@@ -55,8 +55,12 @@ class Shepherd {
   public function populateSettingsFile() {
     $root = $this->getDrupalRootPath();
 
-    // Assume Drupal scaffold created the settings.php
-    $this->filesystem->chmod($root . '/sites/default/settings.php', 0664);
+    // Check if settings.php exists, create it if not.
+    $settings_php = $root . '/sites/default/settings.php';
+    if (!file_exists($settings_php)) {
+      $this->filesystem->copy($root . '/sites/default/default.settings.php', $settings_php);
+    }
+    $this->filesystem->chmod($settings_php, 0664);
 
     // If we haven't already written to settings.php.
     if (!(strpos(file_get_contents($root . '/sites/default/settings.php'), 'START SHEPHERD CONFIG') !== FALSE)) {
