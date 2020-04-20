@@ -65,8 +65,8 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
     );
     $event->getIO()->write('Creating settings.php file if not present.');
     $settingsUpdate->populateSettingsFile();
-    // $event->getIO()->write("Removing write permissions on settings files.");
-    // $settingsUpdate->removeWritePermission();
+    $event->getIO()->write("Removing write permissions on settings files.");
+    $settingsUpdate->removeWritePermission();
   }
 
   public function removeWritePermission(Event $event) {

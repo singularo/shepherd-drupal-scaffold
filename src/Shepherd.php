@@ -177,6 +177,8 @@ class Shepherd {
     $root = $this->getDrupalRootPath();
     $this->filesystem->chmod($root . '/sites/default/settings.php', 0444);
     $this->filesystem->chmod($root . '/sites/default', 0555);
+
+    $this->filesystem->chmod($this->getProjectPath() . '/dsh', 0755);
   }
 
   /**
@@ -187,26 +189,6 @@ class Shepherd {
     $this->filesystem->chmod($root . '/sites/default', 0775);
     $this->filesystem->chmod($root . '/sites/default/settings.php', 0664);
     $this->filesystem->chmod($root . '/sites/default/default.services.yml', 0664);
-  }
-
-  /**
-   * Copy files from origin to destination, optionally overwriting existing.
-   *
-   * @param bool $overwriteExisting
-   *  If true, replace existing files. Defaults to false.
-   */
-  public function copyFiles($origin, $destination, $filenames, $overwriteExisting = FALSE) {
-    foreach ($filenames as $filename) {
-      // Skip copying files that already exist at the destination.
-      if (!$overwriteExisting && $this->filesystem->exists($destination . '/' . $filename)) {
-        continue;
-      }
-      $this->filesystem->copy(
-        $origin . '/' . $filename,
-        $destination . '/' . $filename,
-        TRUE
-      );
-    }
   }
 
   /**
