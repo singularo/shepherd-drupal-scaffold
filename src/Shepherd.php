@@ -210,7 +210,7 @@ class Shepherd {
         $this->filesystem->chmod($file, $permission);
       }
       else {
-        $this->io->writeError($file . ': file does not exist');
+        $this->getIO()->writeError($file . ': file does not exist');
       }
     }
   }
