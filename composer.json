@@ -6,11 +6,13 @@
   "require": {
     "php": ">=7.2",
     "composer-plugin-api": "^1.1",
+    "drupal/core-composer-scaffold": "^8.8",
     "composer/semver": "^1.4",
     "symfony/filesystem": "~3.0"
   },
   "require-dev": {
-    "roave/security-advisories": "dev-master"
+    "roave/security-advisories": "dev-master",
+    "composer/composer": "^1.10"
   },
   "autoload": {
     "psr-4": {

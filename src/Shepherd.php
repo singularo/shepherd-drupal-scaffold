@@ -1,14 +1,12 @@
 <?php
-/**
- * @file
- * Contains Singularo\ShepherdDrupalScaffold\Shepherd.
- */
+
 namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
 use Composer\Package\RootPackageInterface;
 use Composer\Util\Filesystem as ComposerFilesystem;
+use Drupal\Composer\Plugin\Scaffold\Handler;
 use Symfony\Component\Filesystem\Filesystem;
 
 class Shepherd {
