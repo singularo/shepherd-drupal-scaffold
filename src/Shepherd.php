@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
@@ -58,7 +60,9 @@ class Shepherd {
     if (!file_exists($settings_php)) {
       $this->filesystem->copy($root . '/sites/default/default.settings.php', $settings_php);
     }
-    $this->filesystem->chmod($settings_php, 0664);
+    $this->checkExistsSetPerm([
+      $root . '/sites/default/settings.php' => 0664
+    ]);
 
     // If we haven't already written to settings.php.
     if (!(strpos(file_get_contents($root . '/sites/default/settings.php'), 'START SHEPHERD CONFIG') !== FALSE)) {
@@ -173,10 +177,12 @@ class Shepherd {
    */
   public function removeWritePermission() {
     $root = $this->getDrupalRootPath();
-    $this->filesystem->chmod($root . '/sites/default/settings.php', 0444);
-    $this->filesystem->chmod($root . '/sites/default', 0555);
 
-    $this->filesystem->chmod($this->getProjectPath() . '/dsh', 0755);
+    $this->checkExistsSetPerm([
+      [$root . '/sites/default/settings.php' => 0444],
+      [$root . '/sites/default' => 0555],
+      [$this->getProjectPath() . '/dsh' => 0755],
+    ]);
   }
 
   /**
@@ -184,9 +190,29 @@ class Shepherd {
    */
   public function restoreWritePermission() {
     $root = $this->getDrupalRootPath();
-    $this->filesystem->chmod($root . '/sites/default', 0775);
-    $this->filesystem->chmod($root . '/sites/default/settings.php', 0664);
-    $this->filesystem->chmod($root . '/sites/default/default.services.yml', 0664);
+
+    $this->checkExistsSetPerm([
+      [$root . '/sites/default' => 0755],
+      [$root . '/sites/default/settings.php' => 0664],
+      [$root . '/sites/default/default.services.yml' => 0664],
+    ]);
+  }
+
+  /**
+   * Check file exists before trying to set permission.
+   *
+   * @param array $files
+   *   Array of file paths and octal permissions to set on the files.
+   */
+  private function checkExistsSetPerm(array $files): void {
+    foreach ($files as $file => $permission) {
+      if ($this->filesystem->exists($file)) {
+        $this->filesystem->chmod($file, $permission);
+      }
+      else {
+        $this->io->writeError($file . ': file does not exist');
+      }
+    }
   }
 
   /**

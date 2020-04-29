@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
@@ -44,11 +46,10 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    */
   public static function getSubscribedEvents() {
     return [
-      ScriptEvents::PRE_UPDATE_CMD => 'removeWritePermission',
-      ScriptEvents::PRE_INSTALL_CMD => 'removeWritePermission',
-      ScriptEvents::POST_UPDATE_CMD => 'updateSettings',
-      ScriptEvents::POST_INSTALL_CMD => 'updateSettings',
-      PackageEvents::POST_PACKAGE_UPDATE => 'updateSettings',
+      ScriptEvents::PRE_UPDATE_CMD => 'preUpdate',
+      ScriptEvents::PRE_INSTALL_CMD => 'preUpdate',
+      ScriptEvents::POST_INSTALL_CMD => 'postUpdate',
+      PackageEvents::POST_PACKAGE_UPDATE => 'postUpdate',
     ];
   }
 
