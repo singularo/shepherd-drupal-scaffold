@@ -6,13 +6,10 @@ namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
 use Composer\EventDispatcher\EventSubscriberInterface;
-use Composer\Installer\PackageEvents;
 use Composer\IO\IOInterface;
 use Composer\Plugin\PluginInterface;
 use Composer\Script\Event;
 use Composer\Script\ScriptEvents;
-use Drupal\Composer\Plugin\Scaffold\Handler;
-use Singularo\ShepherdDrupalScaffold\Shepherd;
 
 /**
  * Composer plugin for handling Shepherd Drupal scaffold.
@@ -44,12 +41,27 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
   /**
    * {@inheritdoc}
    */
+  public function deactivate(Composer $composer, IOInterface $io) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function uninstall(Composer $composer, IOInterface $io) {
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public static function getSubscribedEvents() {
     return [
-      ScriptEvents::PRE_UPDATE_CMD => 'preUpdate',
-      ScriptEvents::PRE_INSTALL_CMD => 'preUpdate',
-      ScriptEvents::POST_INSTALL_CMD => 'postUpdate',
-      PackageEvents::POST_PACKAGE_UPDATE => 'postUpdate',
+      // Run the pre installs before anything else.
+      ScriptEvents::PRE_UPDATE_CMD => ['preInstall', 99],
+      ScriptEvents::PRE_INSTALL_CMD => ['preInstall', 99],
+      // Run the post installs after everything else.
+      ScriptEvents::POST_CREATE_PROJECT_CMD => ['postInstall', -99],
+      ScriptEvents::POST_INSTALL_CMD => ['postInstall', -99],
+      ScriptEvents::POST_UPDATE_CMD => ['postInstall', -99]
     ];
   }
 
@@ -58,20 +70,18 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    *
    * @param \Composer\Script\Event $event
    */
-  public function postUpdate(Event $event) {
-    $shepherd = new Shepherd($this->composer, $event->getName());
-    $event->getIO()->write('Handling event ' . $event->getName());
+  public function postInstall(Event $event) {
+    $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
     $event->getIO()->write('Creating settings.php file if not present.');
     $shepherd->populateSettingsFile();
     $event->getIO()->write('Removing write permissions on settings files.');
-    $shepherd->removeWritePermission();
+    $shepherd->makeReasonly();
   }
 
-  public function preUpdate(Event $event) {
-    $shepherd = new Shepherd($this->composer, $event->getName());
-    $event->getIO()->write('Handling event ' . $event->getName());
+  public function preInstall(Event $event) {
+    $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
     $event->getIO()->write('Restoring write permissions on settings files.');
-    $shepherd->restoreWritePermission();
+    $shepherd->makeReadWrite();
   }
 
 }

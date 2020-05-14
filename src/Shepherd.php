@@ -6,9 +6,7 @@ namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
-use Composer\Package\RootPackageInterface;
 use Composer\Util\Filesystem as ComposerFilesystem;
-use Drupal\Composer\Plugin\Scaffold\Handler;
 use Symfony\Component\Filesystem\Filesystem;
 
 class Shepherd {
@@ -41,8 +39,9 @@ class Shepherd {
    * @param string $event_name
    *   The event name.
    */
-  public function __construct(Composer $composer, $event_name) {
+  public function __construct(Composer $composer, IOInterface $io, string $event_name) {
     $this->composer = $composer;
+    $this->io = $io;
     $this->eventName = $event_name;
     $this->filesystem = new Filesystem();
   }
@@ -175,26 +174,27 @@ class Shepherd {
   /**
    * Remove all write permissions on Drupal configuration files and folders.
    */
-  public function removeWritePermission() {
+  public function makeReasonly() {
     $root = $this->getDrupalRootPath();
 
     $this->checkExistsSetPerm([
-      [$root . '/sites/default/settings.php' => 0444],
-      [$root . '/sites/default' => 0555],
-      [$this->getProjectPath() . '/dsh' => 0755],
+      $root . '/sites/default/settings.php' => 0444,
+      $root . '/sites/default' => 0555,
+      $root . '/sites/default/default.services.yml' => 0664,
+      $this->getProjectPath() . '/dsh' => 0755,
     ]);
   }
 
   /**
    * Restore write permissions on Drupal configuration files and folders.
    */
-  public function restoreWritePermission() {
+  public function makeReadWrite() {
     $root = $this->getDrupalRootPath();
 
     $this->checkExistsSetPerm([
-      [$root . '/sites/default' => 0755],
-      [$root . '/sites/default/settings.php' => 0664],
-      [$root . '/sites/default/default.services.yml' => 0664],
+      $root . '/sites/default' => 0755,
+      $root . '/sites/default/settings.php' => 0664,
+      $root . '/sites/default/default.services.yml' => 0664,
     ]);
   }
 
@@ -210,7 +210,7 @@ class Shepherd {
         $this->filesystem->chmod($file, $permission);
       }
       else {
-        $this->getIO()->writeError($file . ': file does not exist');
+        $this->io->writeError($file . ': file does not exist');
       }
     }
   }

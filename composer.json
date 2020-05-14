@@ -5,7 +5,7 @@
   "license": "GPL-2.0+",
   "require": {
     "php": ">=7.2",
-    "composer-plugin-api": "^1.1",
+    "composer-plugin-api": "^1.1 || ^2",
     "drupal/core-composer-scaffold": "^8.8",
     "composer/semver": "^1.4",
     "symfony/filesystem": "~3.0"
