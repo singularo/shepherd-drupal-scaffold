@@ -174,7 +174,7 @@ class Shepherd {
   /**
    * Remove all write permissions on Drupal configuration files and folders.
    */
-  public function makeReasonly() {
+  public function makeReadOnly() {
     $root = $this->getDrupalRootPath();
 
     $this->checkExistsSetPerm([
@@ -196,6 +196,15 @@ class Shepherd {
       $root . '/sites/default/settings.php' => 0664,
       $root . '/sites/default/default.services.yml' => 0664,
     ]);
+  }
+
+  /**
+   * Ensure that the shared directory exists and is writable.
+   */
+  public function ensureShared() {
+    $this->filesystem->mkdir(
+      $this->getProjectPath() . '/shared', 0755
+    );
   }
 
   /**

@@ -43,7 +43,7 @@
           "path" : "assets/drush/config-delete.yml",
           "overwrite": false
         },
-        "[project-root]/drush/config-ignore.html": {
+        "[project-root]/drush/config-ignore.yml": {
           "path": "assets/drush/config-ignore.yml",
           "overwrite": false
         },
