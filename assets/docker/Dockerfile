@@ -43,6 +43,7 @@ RUN wget -q https://getcomposer.org/installer -O - | php -d allow_url_fopen=On -
 COPY ./docker/xdebug.ini /etc/php/${PHP_VERSION}/mods-available/xdebug.ini
 
 RUN echo "www-data ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data
+RUN echo "Set disable_coredump false" >> /etc/sudo.conf
 
 # Enable xdebug.
 RUN phpenmod -v ALL -s ALL xdebug
