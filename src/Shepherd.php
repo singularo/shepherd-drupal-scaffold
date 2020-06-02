@@ -110,7 +110,7 @@ class Shepherd {
         '_',
         '',
       ], base64_encode(random_bytes(55))) . "';\n" .
-      "\$config_directories['sync'] = DRUPAL_ROOT . '/../config-export';\n" .
+      "\$settings['config_sync_directory'] = DRUPAL_ROOT . '/../config-sync';\n" .
       "\$settings['shepherd_site_id'] = getenv('SHEPHERD_SITE_ID');\n" .
       "\$settings['shepherd_url'] = getenv('SHEPHERD_URL');\n" .
       "\$settings['shepherd_token'] = getenv('SHEPHERD_TOKEN_FILE') ? file_get_contents(getenv('SHEPHERD_TOKEN_FILE')) : getenv('SHEPHERD_TOKEN');\n\n" .
