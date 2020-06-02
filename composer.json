@@ -9,6 +9,7 @@
     "composer/semver": "^1.4",
     "consolidation/robo": "^2.0",
     "drupal/core-composer-scaffold": "^9",
+    "drush/drush": "^10",
     "symfony/filesystem": "^4.4"
   },
   "require-dev": {

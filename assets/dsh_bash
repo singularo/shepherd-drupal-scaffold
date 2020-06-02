@@ -13,5 +13,8 @@ if ! ssh-add -l > /dev/null; then
   ssh-add ~/.ssh/id_rsa
 fi
 
+# Symlink the vendor binaries into a nice place.
+ln -s ./vendor/bin bin
+
 # Drop user into bash
 bash -l
