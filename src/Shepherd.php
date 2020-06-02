@@ -182,6 +182,7 @@ class Shepherd {
       $root . '/sites/default' => 0555,
       $root . '/sites/default/default.services.yml' => 0664,
       $this->getProjectPath() . '/dsh' => 0755,
+      $this->getProjectPath() . '/dsh_bash' => 0755,
     ]);
   }
 
