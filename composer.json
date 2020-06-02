@@ -6,8 +6,9 @@
   "require": {
     "php": ">=7.4",
     "composer-plugin-api": "^1.1 || ^2",
-    "drupal/core-composer-scaffold": "^9",
     "composer/semver": "^1.4",
+    "consolidation/robo": "^2.0",
+    "drupal/core-composer-scaffold": "^9",
     "symfony/filesystem": "^4.4"
   },
   "require-dev": {
