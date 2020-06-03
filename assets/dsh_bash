@@ -14,7 +14,9 @@ if ! ssh-add -l > /dev/null; then
 fi
 
 # Symlink the vendor binaries into a nice place.
-ln -s ./vendor/bin bin
+if [ ! -L bin ]; then
+  ln -s ./vendor/bin bin
+fi
 
 # Drop user into bash
 bash -l
