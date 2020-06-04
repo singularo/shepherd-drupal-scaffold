@@ -71,6 +71,7 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    * @param \Composer\Script\Event $event
    */
   public function postInstall(Event $event) {
+    $shepherd->makeReadWrite();
     $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
     $event->getIO()->write('Creating settings.php file if not present.');
     $shepherd->populateSettingsFile();

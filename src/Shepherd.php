@@ -32,6 +32,16 @@ class Shepherd {
   protected $filesystem;
 
   /**
+   * @var string $root
+   */
+  protected $root;
+
+  /**
+   * @var string $settings
+   */
+  protected $settings;
+
+  /**
    * Construct a Config object.
    *
    * @param \Composer\Composer $composer
@@ -44,6 +54,9 @@ class Shepherd {
     $this->io = $io;
     $this->eventName = $event_name;
     $this->filesystem = new Filesystem();
+
+    $this->root = $this->getProjectPath() . '/web';
+    $this->settings = $this->root . '/sites/default/settings.php';
   }
 
   /**
@@ -52,22 +65,16 @@ class Shepherd {
    * Note: does nothing if the file already exists.
    */
   public function populateSettingsFile() {
-    $root = $this->getDrupalRootPath();
-
     // Check if settings.php exists, create it if not.
-    $settings_php = $root . '/sites/default/settings.php';
-    if (!file_exists($settings_php)) {
-      $this->filesystem->copy($root . '/sites/default/default.settings.php', $settings_php);
+    if (!file_exists($this->settings)) {
+      $this->filesystem->copy($this->root . '/sites/default/default.settings.php', $this->settings);
     }
-    $this->checkExistsSetPerm([
-      $root . '/sites/default/settings.php' => 0664
-    ]);
 
     // If we haven't already written to settings.php.
-    if (!(strpos(file_get_contents($root . '/sites/default/settings.php'), 'START SHEPHERD CONFIG') !== FALSE)) {
+    if (!(strpos(file_get_contents($this->settings), 'START SHEPHERD CONFIG') !== FALSE)) {
       // Append Shepherd-specific environment variable settings to settings.php.
       file_put_contents(
-        $root . '/sites/default/settings.php',
+        $this->settings,
         $this->generateSettings(),
         FILE_APPEND
       );
@@ -175,12 +182,10 @@ class Shepherd {
    * Remove all write permissions on Drupal configuration files and folders.
    */
   public function makeReadOnly() {
-    $root = $this->getDrupalRootPath();
-
     $this->checkExistsSetPerm([
-      $root . '/sites/default/settings.php' => 0444,
-      $root . '/sites/default' => 0555,
-      $root . '/sites/default/default.services.yml' => 0664,
+      $this->root . '/sites/default' => 0555,
+      $this->root . '/sites/default/default.services.yml' => 0664,
+      $this->settings => 0444,
       $this->getProjectPath() . '/dsh' => 0755,
       $this->getProjectPath() . '/dsh_bash' => 0755,
     ]);
@@ -190,12 +195,10 @@ class Shepherd {
    * Restore write permissions on Drupal configuration files and folders.
    */
   public function makeReadWrite() {
-    $root = $this->getDrupalRootPath();
-
     $this->checkExistsSetPerm([
-      $root . '/sites/default' => 0755,
-      $root . '/sites/default/settings.php' => 0664,
-      $root . '/sites/default/default.services.yml' => 0664,
+      $this->root . '/sites/default' => 0755,
+      $this->root . '/sites/default/default.services.yml' => 0664,
+      $this->settings => 0664,
     ]);
   }
 
@@ -252,14 +255,4 @@ class Shepherd {
     return dirname($this->getVendorPath());
   }
 
-  /**
-   * Get the path to the Drupal root directory.
-   *
-   * E.g. /home/user/code/project/web
-   *
-   * @return string
-   */
-  public function getDrupalRootPath() {
-    return $this->getProjectPath() . '/web';
-  }
 }
