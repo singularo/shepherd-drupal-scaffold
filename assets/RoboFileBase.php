@@ -15,7 +15,7 @@ abstract class RoboFileBase extends \Robo\Tasks {
   protected $drush_cmd;
   protected $local_user;
 
-  protected $drush_bin = "bin/drush";
+  protected $drush_bin = "drush";
   protected $composer_bin = "composer";
 
   /**
@@ -23,21 +23,21 @@ abstract class RoboFileBase extends \Robo\Tasks {
    *
    * @var string
    */
-  protected $phpcsCmd = 'bin/phpcs';
+  protected $phpcsCmd = 'phpcs';
 
   /**
    * The path to the phpcbf command.
    *
    * @var string
    */
-  protected $phpcbfCmd = 'bin/phpcbf';
+  protected $phpcbfCmd = 'phpcbf';
 
   /**
    * The phpstan command.
    *
    * @var string
    */
-  protected $phpstanCmd = 'php ./bin/phpstan analyze --no-progress';
+  protected $phpstanCmd = 'phpstan analyze --no-progress';
 
   protected $php_enable_module_command = 'phpenmod -v ALL';
   protected $php_disable_module_command = 'phpdismod -v ALL';
