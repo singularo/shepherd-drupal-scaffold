@@ -1,4 +1,5 @@
 <?php
+
 /**
  * @file
  * Contains \Robo\RoboFile.
@@ -9,21 +10,25 @@
  * Configuration overrides should be made in the constructor.
  */
 
+declare(strict_types=1);
+
 include_once 'RoboFileBase.php';
 
 /**
  * Class RoboFile.
  */
-class RoboFile extends RoboFileBase
-{
+class RoboFile extends RoboFileBase {
 
-    /**
-     * {@inheritdoc}
-     */
-    public function __construct()
-    {
-        parent::__construct();
-        // Put project specific overrides here, below the parent constructor.
-    }
+  // @codingStandardsIgnoreStart
+  /**
+   * Example of overriding the constructor.
+   *
+   * Coding standards ignored as its an empty.
+   */
+  public function __construct() {
+    parent::__construct();
+    // Put project specific overrides here, below the parent constructor.
+  }
+  // @codingStandardsIgnoreEnd
 
 }
