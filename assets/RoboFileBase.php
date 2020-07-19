@@ -359,23 +359,12 @@ abstract class RoboFileBase extends Tasks {
   }
 
   /**
-   * Turns on twig debug mode, autoreload on and caching off.
+   * Turns on twig debug mode, auto reload on and caching off.
    */
   public function devTwigDebugEnable(): void {
     $this->devConfigWriteable();
-    $this->taskReplaceInFile($this->servicesYml)
-      ->from('debug: false')
-      ->to('debug: true')
-      ->run();
-    $this->taskReplaceInFile($this->servicesYml)
-      ->from('auto_reload: null')
-      ->to('auto_reload: true')
-      ->run();
-    $this->taskReplaceInFile($this->servicesYml)
-      ->from('cache: true')
-      ->to('cache: false')
-      ->run();
     $this->devAggregateAssetsDisable();
+    $this->devUpdateServices(TRUE);
     $this->devConfigReadOnly();
     $this->devCacheRebuild();
   }
@@ -385,20 +374,39 @@ abstract class RoboFileBase extends Tasks {
    */
   public function devTwigDebugDisable(): void {
     $this->devConfigWriteable();
-    $this->taskReplaceInFile($this->servicesYml)
-      ->from('debug: true')
-      ->to('debug: false')
-      ->run();
-    $this->taskReplaceInFile($this->servicesYml)
-      ->from('auto_reload: true')
-      ->to('auto_reload: null')
-      ->run();
-    $this->taskReplaceInFile($this->servicesYml)
-      ->from('c: false')
-      ->to('cache: true')
-      ->run();
+    $this->devUpdateServices(FALSE);
     $this->devConfigReadOnly();
     $this->devCacheRebuild();
+  }
+
+  /**
+   * Replace strings in the services yml.
+   *
+   * @param bool $enable
+   *   Whether to disable or enable debug parameters.
+   */
+  private function devUpdateServices($enable = TRUE): void {
+    $replacements = [
+      ['debug: false', 'debug: true'],
+      ['auto_reload: null', 'auto_reload: true'],
+      ['cache: true', 'cache: false'],
+    ];
+
+    if ($enable) {
+      $new = 1;
+      $old = 0;
+    }
+    else {
+      $new = 0;
+      $old = 1;
+    }
+
+    foreach ($replacements as $values) {
+      $this->taskReplaceInFile($this->servicesYml)
+        ->from($values[$old])
+        ->to($values[$new])
+        ->run();
+    }
   }
 
   /**
