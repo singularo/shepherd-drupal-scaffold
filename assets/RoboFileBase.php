@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 use Robo\Tasks;
+use Robo\ResultData;
 
 /**
  * Class RoboFileBase.
@@ -125,14 +126,14 @@ abstract class RoboFileBase extends Tasks {
   /**
    * Force projects to declare which install profile to use.
    */
-  protected function getDrupalProfile(): void {
+  protected function getDrupalProfile(): ?ResultData {
     $profile = getenv('SHEPHERD_INSTALL_PROFILE');
     if (empty($profile)) {
-      $this->say("Install profile environment variable is not set.\n");
-      exit(1);
+      return new ResultData(1, "Install profile environment variable is not set.");
     }
 
     $this->drupalProfile = $profile;
+    return new ResultData(TRUE);
   }
 
   /**
@@ -215,8 +216,11 @@ abstract class RoboFileBase extends Tasks {
    *
    * @param string $flags
    *   Additional flags to pass to the composer install command.
+   *
+   * @return \Robo\ResultData|null
+   *   Return whether the install succeeded.
    */
-  public function buildComposerInstall($flags = ''): void {
+  public function buildComposerInstall($flags = ''): ?ResultData {
     try {
       $command = $this->taskExec('composer')
         ->arg('install')
@@ -229,15 +233,16 @@ abstract class RoboFileBase extends Tasks {
       $command->run();
     }
     catch (Exception $e) {
-      $this->say('Composer install failed.');
-      exit(1);
+      return new ResultData(1, 'Composer install failed.');
     }
+
+    return new ResultData(TRUE);
   }
 
   /**
    * Set the owner and group of all files in the files dir to the web user.
    */
-  public function buildSetFilesOwner(): void {
+  public function buildSetFilesOwner(): ?ResultData {
     $this->say('Setting ownership and permissions.');
     foreach ([$this->filePublic, $this->filePrivate, $this->fileTemp] as $path) {
       try {
@@ -249,16 +254,17 @@ abstract class RoboFileBase extends Tasks {
           ->run();
       }
       catch (Exception $e) {
-        $this->say('File ownership failed.');
-        exit(1);
+        return new ResultData(1, 'File ownership failed.');
       }
     }
+
+    return new ResultData(TRUE);
   }
 
   /**
    * Clean config and files, then install Drupal and module dependencies.
    */
-  public function buildInstall(): void {
+  public function buildInstall(): ?ResultData {
     // Ensure configuration is writable.
     $this->devConfigWriteable();
 
@@ -279,17 +285,18 @@ abstract class RoboFileBase extends Tasks {
     }
     catch (Exception $e) {
       $this->devConfigReadOnly();
-      $this->say('drush site-install failed.');
-      exit(1);
+      return new ResultData(1, 'drush site-install failed.');
     }
 
     $this->devCacheRebuild();
+
+    return new ResultData(TRUE);
   }
 
   /**
    * Set the RewriteBase value in .htaccess appropriate for the site.
    */
-  public function setSitePath(): void {
+  public function setSitePath(): ?ResultData {
     if (!empty($this->config['site']['path'])) {
       $this->say("Setting site path.");
       $successful = $this->taskReplaceInFile("$this->applicationRoot/.htaccess")
@@ -297,14 +304,16 @@ abstract class RoboFileBase extends Tasks {
         ->to("\n  RewriteBase /" . ltrim($this->config['site']['path'], '/') . "\n")
         ->run();
 
-      $this->checkFail($successful, "Couldn't update .htaccess file with path.");
+      return $this->checkFail($successful, "Couldn't update .htaccess file with path.");
     }
+
+    return new ResultData(TRUE);
   }
 
   /**
    * Clean the application root in preparation for a new build.
    */
-  public function buildClean(): void {
+  public function buildClean(): ?ResultData {
     $this->setPermissions("$this->applicationRoot/sites/default", 0755);
     try {
       $this->taskExecStack()
@@ -318,44 +327,48 @@ abstract class RoboFileBase extends Tasks {
         ->run();
     }
     catch (Exception $e) {
-      $this->say('Build failed.');
-      exit(1);
+      return new ResultData(1, 'Build failed.');
     }
+
+    return new ResultData(TRUE);
   }
 
   /**
    * Run all the drupal updates against a build.
    */
-  public function buildUpdate(): void {
+  public function buildUpdate(): ResultData {
     // Run the module updates.
-    $this->checkFail($this->_exec('drush -y updatedb')->wasSuccessful(), 'Running drupal updates failed.');
+    return $this->checkFail($this->_exec('drush -y updatedb')->wasSuccessful(), 'Running drupal updates failed.');
   }
 
   /**
    * Perform cache clear in the app directory.
    */
-  public function devCacheRebuild(): void {
-    $this->checkFail($this->_exec('drush cr')->wasSuccessful(), 'Running cache-rebuild failed.');
+  public function devCacheRebuild(): ResultData {
+    return $this->checkFail($this->_exec('drush cr')->wasSuccessful(), 'Running cache-rebuild failed.');
   }
 
   /**
    * CLI debug enable.
    */
-  public function devXdebugEnable(): void {
+  public function devXdebugEnable(): ResultData {
     // Only run this on environments configured with xdebug.
     if (getenv('XDEBUG_CONFIG')) {
-      $this->checkFail($this->_exec('sudo phpenmod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug enable failed.');
+      return $this->checkFail($this->_exec('sudo phpenmod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug enable failed.');
     }
+
+    return new ResultData(TRUE);
   }
 
   /**
    * CLI debug disable.
    */
-  public function devXdebugDisable(): void {
+  public function devXdebugDisable(): ResultData {
     // Only run this on environments configured with xdebug.
     if (getenv('XDEBUG_CONFIG')) {
-      $this->checkFail($this->_exec('sudo phpdismod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug disable failed.');
+      return $this->checkFail($this->_exec('sudo phpdismod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug disable failed.');
     }
+    return new ResultData(TRUE);
   }
 
   /**
@@ -363,7 +376,7 @@ abstract class RoboFileBase extends Tasks {
    */
   public function devTwigDebugEnable(): void {
     $this->devConfigWriteable();
-    $this->devAggregateAssetsDisable();
+    $this->devAggregateAssetsDisable(FALSE);
     $this->devUpdateServices(TRUE);
     $this->devConfigReadOnly();
     $this->devCacheRebuild();
@@ -411,8 +424,14 @@ abstract class RoboFileBase extends Tasks {
 
   /**
    * Disable asset aggregation.
+   *
+   * @param bool $cacheClear
+   *   Whether to clear the cache after changes.
+   *
+   * @return \Robo\ResultData
+   *   The result of the command.
    */
-  public function devAggregateAssetsDisable(): void {
+  public function devAggregateAssetsDisable($cacheClear = TRUE): ResultData {
     try {
       $this->taskExecStack()
         ->exec('drush cset system.performance js.preprocess 0 -y')
@@ -420,16 +439,25 @@ abstract class RoboFileBase extends Tasks {
         ->run();
     }
     catch (Exception $e) {
-      $this->say('Aggregate disable failed.');
-      exit(1);
+      return new ResultData(1, 'Aggregate disable failed.');
     }
-    $this->devCacheRebuild();
+
+    if ($cacheClear) {
+      $this->devCacheRebuild();
+    }
+    return new ResultData(TRUE);
   }
 
   /**
    * Enable asset aggregation.
+   *
+   * @param bool $cacheClear
+   *   Whether to clear the cache after changes.
+   *
+   * @return \Robo\ResultData
+   *   The result of the command.
    */
-  public function devAggregateAssetsEnable(): void {
+  public function devAggregateAssetsEnable($cacheClear = TRUE): ResultData {
     try {
       $this->taskExecStack()
         ->exec('drush cset system.performance js.preprocess 1 -y')
@@ -437,10 +465,13 @@ abstract class RoboFileBase extends Tasks {
         ->run();
     }
     catch (Exception $e) {
-      $this->say('Aggregate enable failed.');
-      exit(1);
+      return new ResultData(1, 'Aggregate enable failed.');
     }
-    $this->devCacheRebuild();
+
+    if ($cacheClear) {
+      $this->devCacheRebuild();
+    }
+    return new ResultData(TRUE);
   }
 
   /**
@@ -468,8 +499,11 @@ abstract class RoboFileBase extends Tasks {
    *
    * @param string $sql_file
    *   Path to sql file to import.
+   *
+   * @return \Robo\ResultData
+   *   The result of the command.
    */
-  public function devImportDb($sql_file): void {
+  public function devImportDb($sql_file): ResultData {
     $start = new DateTime();
     try {
       $this->taskExecStack()
@@ -481,11 +515,13 @@ abstract class RoboFileBase extends Tasks {
         ->run();
     }
     catch (Exception $e) {
-      $this->say('Database import failed.');
-      exit(1);
+      return new ResultData(1, 'Database import failed.');
     }
+
     $this->say('Duration: ' . date_diff(new DateTime(), $start)->format('%im %Ss'));
     $this->say('Database imported, admin user password is : password');
+
+    return new ResultData(TRUE);
   }
 
   /**
@@ -556,13 +592,18 @@ abstract class RoboFileBase extends Tasks {
    *   Task ran successfully or not.
    * @param string $message
    *   Optional: A helpful message to print.
+   *
+   * @return \Robo\ResultData
+   *   The result of the command.
    */
-  protected function checkFail($successful, $message = ''): void {
+  protected function checkFail($successful, $message = ''): ResultData {
     if (!$successful) {
       $this->say('APP_ERROR: ' . $message);
       // Prevent any other tasks from executing.
-      exit(1);
+      return new ResultData(1, $message);
     }
+
+    return new ResultData(TRUE);
   }
 
 }
