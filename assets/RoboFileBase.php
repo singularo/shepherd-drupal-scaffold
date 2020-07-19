@@ -252,7 +252,7 @@ abstract class RoboFileBase extends Tasks {
           ->mkdir($path)
           ->chown($path, $this->webUser)
           ->chgrp($path, $this->localUser)
-          ->chmod($path, (int) decoct(0755), 0000)
+          ->chmod($path, 0755, 0000)
           ->run();
       }
       catch (Exception $e) {
@@ -532,7 +532,7 @@ abstract class RoboFileBase extends Tasks {
   protected function setPermissions($file, $permission): void {
     if (file_exists($file)) {
       $this->taskFilesystemStack()
-        ->chmod($file, (int) decoct($permission), 0000)
+        ->chmod($file, (int) $permission, 0000)
         ->run();
     }
   }
