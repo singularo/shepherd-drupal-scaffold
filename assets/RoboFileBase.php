@@ -187,7 +187,7 @@ abstract class RoboFileBase extends Tasks {
     $start = new DateTime();
     $this->devXdebugDisable();
     $this->devComposerValidate();
-    //$this->buildMake();
+    $this->buildComposerInstall();
     $this->buildSetFilesOwner();
     $this->buildInstall();
     $this->devCacheRebuild();
@@ -203,7 +203,7 @@ abstract class RoboFileBase extends Tasks {
    */
   public function distributionBuild(): void {
     $this->devComposerValidate();
-    $this->buildMake('--prefer-dist --no-suggest --no-dev --optimize-autoloader');
+    $this->buildComposerInstall('--prefer-dist --no-suggest --no-dev --optimize-autoloader');
     $this->setSitePath();
   }
 
@@ -223,7 +223,7 @@ abstract class RoboFileBase extends Tasks {
    * @param string $flags
    *   Additional flags to pass to the composer install command.
    */
-  public function buildMake($flags = ''): void {
+  public function buildComposerInstall($flags = ''): void {
     try {
       $command = $this->taskExec('composer')
         ->arg('install')
@@ -245,13 +245,14 @@ abstract class RoboFileBase extends Tasks {
    * Set the owner and group of all files in the files dir to the web user.
    */
   public function buildSetFilesOwner(): void {
+    $this->say('Setting ownership and permissions.');
     foreach ([$this->filePublic, $this->filePrivate, $this->fileTemp] as $path) {
       try {
-        $this->say('Setting ownership and permissions.');
         $this->taskFilesystemStack()
-          ->mkdir($path, 0755)
+          ->mkdir($path)
           ->chown($path, $this->webUser)
           ->chgrp($path, $this->localUser)
+          ->chmod($path, (int) decoct(0755), 0000)
           ->run();
       }
       catch (Exception $e) {
@@ -311,7 +312,7 @@ abstract class RoboFileBase extends Tasks {
    * Clean the application root in preparation for a new build.
    */
   public function buildClean(): void {
-    $this->setPermissions("$this->applicationRoot/sites/default", '0755');
+    $this->setPermissions("$this->applicationRoot/sites/default", 0755);
     try {
       $this->taskExecStack()
         ->exec("rm -fR $this->applicationRoot/core")
@@ -445,20 +446,20 @@ abstract class RoboFileBase extends Tasks {
    * Make config files write-able.
    */
   public function devConfigWriteable(): void {
-    $this->setPermissions("$this->applicationRoot/sites/default/services.yml", '0664');
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.php", '0664');
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.local.php", '0664');
-    $this->setPermissions("$this->applicationRoot/sites/default", '0775');
+    $this->setPermissions("$this->applicationRoot/sites/default/services.yml", 0664);
+    $this->setPermissions("$this->applicationRoot/sites/default/settings.php", 0664);
+    $this->setPermissions("$this->applicationRoot/sites/default/settings.local.php", 0664);
+    $this->setPermissions("$this->applicationRoot/sites/default", 0775);
   }
 
   /**
    * Make config files read only.
    */
   public function devConfigReadOnly(): void {
-    $this->setPermissions("$this->applicationRoot/sites/default/services.yml", '0444');
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.php", '0444');
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.local.php", '0444');
-    $this->setPermissions("$this->applicationRoot/sites/default", '0555');
+    $this->setPermissions("$this->applicationRoot/sites/default/services.yml", 0444);
+    $this->setPermissions("$this->applicationRoot/sites/default/settings.php", 0444);
+    $this->setPermissions("$this->applicationRoot/sites/default/settings.local.php", 0444);
+    $this->setPermissions("$this->applicationRoot/sites/default", 0555);
   }
 
   /**
@@ -531,7 +532,7 @@ abstract class RoboFileBase extends Tasks {
   protected function setPermissions($file, $permission): void {
     if (file_exists($file)) {
       $this->taskFilesystemStack()
-        ->chmod($file, (int) $permission)
+        ->chmod($file, (int) decoct($permission), 0000)
         ->run();
     }
   }
