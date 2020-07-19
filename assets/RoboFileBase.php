@@ -2,19 +2,12 @@
 
 /**
  * @file
- * The base Robo file with common functionality.
- *
- * Implementation of base class for Robo - http://robo.li/
- */
-
-declare(strict_types=1);
-
-/**
- * @file
  * Contains \Robo\RoboFileBase.
  *
  * Implementation of class for Robo - http://robo.li/
  */
+
+declare(strict_types=1);
 
 use Robo\Tasks;
 
@@ -333,16 +326,16 @@ abstract class RoboFileBase extends Tasks {
   /**
    * Run all the drupal updates against a build.
    */
-  public function buildApplyUpdates(): void {
+  public function buildUpdate(): void {
     // Run the module updates.
-    $this->checkFail($this->_exec('drush -y updatedb')->wasSuccessful(), 'running drupal updates failed.');
+    $this->checkFail($this->_exec('drush -y updatedb')->wasSuccessful(), 'Running drupal updates failed.');
   }
 
   /**
    * Perform cache clear in the app directory.
    */
   public function devCacheRebuild(): void {
-    $this->checkFail($this->_exec('drush cr')->wasSuccessful(), 'drush cache-rebuild failed.');
+    $this->checkFail($this->_exec('drush cr')->wasSuccessful(), 'Running cache-rebuild failed.');
   }
 
   /**
@@ -351,7 +344,7 @@ abstract class RoboFileBase extends Tasks {
   public function devXdebugEnable(): void {
     // Only run this on environments configured with xdebug.
     if (getenv('XDEBUG_CONFIG')) {
-      $this->checkFail($this->_exec('sudo phpenmod -v ALL -s cli xdebug')->wasSuccessful(), 'xdebug enabling failed.');
+      $this->checkFail($this->_exec('sudo phpenmod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug enable failed.');
     }
   }
 
@@ -361,7 +354,7 @@ abstract class RoboFileBase extends Tasks {
   public function devXdebugDisable(): void {
     // Only run this on environments configured with xdebug.
     if (getenv('XDEBUG_CONFIG')) {
-      $this->checkFail($this->_exec('sudo phpdismod -v ALL -s cli xdebug')->wasSuccessful(), 'xdebug disabling failed.');
+      $this->checkFail($this->_exec('sudo phpdismod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug disable failed.');
     }
   }
 
