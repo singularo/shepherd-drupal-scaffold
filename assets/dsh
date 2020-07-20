@@ -5,21 +5,7 @@ set -euo pipefail
 
 # Used as the prefix for docker networking, container naming and nginx hostname.
 export PROJECT=$(basename ${PWD})
-# docker-compose stopped stripping chars from project name in 1.21.0.
-export DOCKER_COMPOSE_VERSION=$(docker-compose -v | awk '{print $3}' | rev | cut -c 2- | rev)
-function version { echo "$@" | awk -F. '{ printf("%d%03d%03d%03d\n", $1,$2,$3,$4); }'; }
-if [ $(version ${DOCKER_COMPOSE_VERSION}) -lt $(version "1.21.0") ]; then
-  export PROJECT=$(echo ${PROJECT} | sed 's/[-_]//g')
-fi
-
-# Determine the OS type of the host machine.
-if [ "$(uname)" == "Darwin" ]; then
-  HOST_TYPE='mac'
-  export DOCKER_COMPOSE_FILE='docker-compose.osx.yml'
-else
-  HOST_TYPE='linux'
-  export DOCKER_COMPOSE_FILE='docker-compose.linux.yml'
-fi
+export DOCKER_COMPOSE_FILE="docker-compose.$(uname | tr '[:upper:]' '[:lower:]').yml"
 
 # Ultimately permit overriding repo docker-compose.yml with custom file.
 if [ -f docker-compose.yml ]; then
@@ -57,7 +43,7 @@ dsh_start() {
 
   notice "Starting project containers."
   docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
-  export URL="http://127.0.0.1"
+  export URL="http://${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}"
   notice "Please wait about 10 seconds for the database to settle.
 You can now access the site from ${URL}.
 Project files are available in /code, You may need to build and install your
@@ -93,7 +79,7 @@ dsh_down() {
 # Stops project, then takes down containers, removes volumes and remove dev image.
 dsh_purge() {
   dsh_down
-  docker rmi -f uofa/s2i-shepherd-drupal-dev
+  docker rmi -f singularo/s2i-shepherd-drupal-dev
 }
 
 # Command: ./dsh status
@@ -120,7 +106,7 @@ dsh_project() {
 # Fetches all images used by the project.
 dsh_pull() {
   # docker-compose doesn't resolve sub-dependencies in Dockerfiles.
-  docker pull uofa/s2i-shepherd-drupal
+  docker pull singularo/s2i-shepherd-drupal
   docker-compose -f ${DOCKER_COMPOSE_FILE} pull --ignore-pull-failures
   docker-compose -f ${DOCKER_COMPOSE_FILE} build
 }
@@ -130,12 +116,12 @@ dsh_pull() {
 NFS_FILE=/etc/exports
 NFS_LINE="/Users -alldirs -mapall=${USER_ID}:${GROUP_ID} localhost"
 dsh_setup_nfs() {
-  if [ ${HOST_TYPE} != "mac" ]; then
+  if [ $(uname) != "Darwin" ]; then
     echo "This script is OSX-only. Please do not run it on any other Unix."
     exit 1
   fi
 
-  if [[ $EUID -eq 0 ]]; then
+  if [[ ${EUID} -eq 0 ]]; then
     echo "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
     exit 1
   fi
@@ -149,9 +135,9 @@ dsh_setup_nfs() {
   echo "WARNING: This script will shut down running containers."
   echo ""
   echo -n "Do you wish to proceed? [y]: "
-  read decision
+  read DECISION
 
-  if [ "$decision" != "y" ]; then
+  if [ "${DECISION}" != "y" ]; then
     echo "Exiting. No changes made."
     exit 1
   fi
@@ -176,12 +162,12 @@ dsh_setup_nfs() {
   sudo chown -R "${USER_ID}:${GROUP_ID}" .
 
   echo "== Setting up nfs..."
-  sudo cp /dev/null "$NFS_FILE"
-  grep -qF -- "$NFS_LINE" "$NFS_FILE" || sudo echo "$NFS_LINE" | sudo tee -a "$NFS_FILE" > /dev/null
+  sudo cp /dev/null "${NFS_FILE}"
+  grep -qF -- "${NFS_LINE}" "${NFS_FILE}" || sudo echo "${NFS_LINE}" | sudo tee -a "${NFS_FILE}" > /dev/null
 
   LINE="nfs.server.mount.require_resv_port = 0"
   FILE=/etc/nfs.conf
-  grep -qF -- "$LINE" "$FILE" || sudo echo "$LINE" | sudo tee -a "$FILE" > /dev/null
+  grep -qF -- "${LINE}" "${FILE}" || sudo echo "${LINE}" | sudo tee -a "${FILE}" > /dev/null
 
   echo "== Restarting nfsd..."
   sudo nfsd restart
@@ -198,35 +184,40 @@ dsh_setup_nfs() {
 # Command: ./dsh rnfs
 # Removes nfs setup.
 dsh_remove_nfs() {
-  if [ ${HOST_TYPE} != "mac" ]; then
+  if [ $(uname) != "Darwin" ]; then
     echo "This script is OSX-only. Please do not run it on any other Unix."
     exit 1
   fi
 
-  if [[ $EUID -eq 0 ]]; then
+  if [[ ${EUID} -eq 0 ]]; then
     echo "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
     exit 1
   fi
 
   echo "== Removing nfsd exports..."
-  sudo sed -i '' "/$(echo "$NFS_LINE" | sed 's/\//\\\//g')/d" ${NFS_FILE}
+  sudo sed -i '' "/$(echo "${NFS_LINE}" | sed 's/\//\\\//g')/d" ${NFS_FILE}
   echo "== Restarting nfsd..."
   sudo nfsd restart
   echo "== Done"
 }
 
 dsh_help() {
-  printf "\nUsage: dsh COMMAND\n\n
-Commands:\n
-\thelp\tShow this help.\n
-\tnfs\tSetup NFS for macOS.\n
-\trnfs\tRemove NFS for macOS.\n
-\tpurge\tPurge the docker containers, network and proxy and remove all data.\n
-\tshell\tStart a shell which is connected to the containers and can be used to run commands.\n
-\tstart\tStart the docker containers, network and proxy.\n
-\tstatus\tShow the status of this projects containers.\n
-\tstop\tStop the docker containers, network and proxy, but keep data for a re-start.\n
-\nIf no command is given, shell is the default.\n
+  printf "\nUsage: dsh COMMAND\n
+Commands:
+\tdown\tShutdown and destroy the containers.
+\texec\tExecute a command in the container.
+\thelp\tShow this help.
+\tlogs\tShow the container logs with tail -f - ctrl-c to exit.
+\tpull\tPull the latest container images.
+\tpurge\tPurge the docker containers, network and proxy and remove all data.
+\tshell\tStart a shell which is connected to the containers and can be used to run commands.
+\tstart\tStart the docker containers, network and proxy.
+\tstatus\tShow the status of this projects containers.
+\tstop\tStop the docker containers, network and proxy, but keep data for a re-start.
+Mac specific setup:
+\tnfs\tSetup NFS for macOS.
+\trnfs\tRemove NFS for macOS.
+\nIf no command is given, shell is the default.
 Commands can be shortened to their uniqe component, eg ./dsh sh is the same as ./dsh shell.\n\n"
 }
 
@@ -249,14 +240,14 @@ case ${COMMAND} in
   nfs)
     dsh_setup_nfs
     ;;
-  rnfs)
-    dsh_remove_nfs
-    ;;
   pul*)
     dsh_pull
     ;;
   pur*)
     dsh_purge
+    ;;
+  rnfs)
+    dsh_remove_nfs
     ;;
   sh*|ss*)
     dsh_shell ${@:2}

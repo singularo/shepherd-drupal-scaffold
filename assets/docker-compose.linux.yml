@@ -9,8 +9,6 @@ services:
         GROUP_ID: ${GROUP_ID:-1000}
     image: singularo/s2i-shepherd-drupal-dev
     hostname: ${PROJECT}
-    ports:
-      - "80:8080"
     environment:
       DATABASE_HOST: db
       DATABASE_USER: user
@@ -18,32 +16,25 @@ services:
       HASH_SALT: random-hash
       MEMCACHE_ENABLED: 0
       MEMCACHE_HOST: memcached
-      PHP_IDE_CONFIG: serverName=${PROJECT}.${DOMAIN}
+      PHP_IDE_CONFIG: serverName=${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}
       PUBLIC_DIR: /shared/public
       REDIS_ENABLED: 0
       REDIS_HOST: redis
-      # REDIS_PASSWORD: testing
-      SHEPHERD_SITE_ID: 2
-      # Define this in an env var based on what you are installing.
-      # SHEPHERD_INSTALL_PROFILE:
       SHEPHERD_SECRET_PATH: /code/private
-      SHEPHERD_TOKEN: super-secret-token
-      SHEPHERD_URL: http://localhost
       SITE_TITLE: Drupal site
       SITE_MAIL: site@example.com
       SITE_ADMIN_EMAIL: admin@example.com
       SITE_ADMIN_USERNAME: admin
       SITE_ADMIN_PASSWORD: password
       SSH_AUTH_SOCK: /ssh/ssh
-      # Allow linux users to use jwilder/nginx-proxy
+      TMP_DIR: /shared/tmp
+
+      # Use jwilder/nginx-proxy for virtual hosts.
       VIRTUAL_HOST: ${PROJECT}.${DOMAIN}
       # Do not define this as '/' or apache2 will give strange behaviour, to test locally,
       # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
       # WEB_PATH: /subpath
       XDEBUG_CONFIG: "remote_host=172.17.0.1"
-
-      # Local variables
-      SHEPHERD_INSTALL_PROFILE: standard
     volumes:
       - .:/code
       - ./shared:/shared
@@ -70,23 +61,10 @@ services:
 
   redis:
     image: redis:alpine
-    command: |
-      redis-server
-      --maxmemory 512Mi
-      --maxmemory-policy allkeys-lru
-      --save ""
-    # --requirepass password
     networks:
       - default
 
   memcached:
     image: memcached:alpine
-    networks:
-      - default
-
-  selenium:
-    image: selenium/standalone-chrome:3.141.59-oxygen
-    volumes:
-      - /dev/shm:/dev/shm
     networks:
       - default
