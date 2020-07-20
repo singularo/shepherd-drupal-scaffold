@@ -31,8 +31,8 @@
           "path": "assets/docker-compose.linux.yml",
           "overwrite": false
         },
-        "[project-root]/docker-compose.osx.yml": {
-          "path": "assets/docker-compose.osx.yml",
+        "[project-root]/docker-compose.darwin.yml": {
+          "path": "assets/docker-compose.darwin.yml",
           "overwrite": false
         },
         "[project-root]/docker/Dockerfile": {
