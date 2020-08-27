@@ -527,15 +527,15 @@ abstract class RoboFileBase extends Tasks {
    *   The result of the command.
    */
   public function devResetAdminPass(): ResultData {
+    // Retrieve the name of the user.
     $command = $this->taskExec('drush sqlq "SELECT name from users u LEFT JOIN users_field_data ud ON u.uid = ud.uid WHERE u.uid = 1"')
       ->printOutput(FALSE)
       ->run();
-
     $adminUser = trim($command->getMessage());
-    $command = $this->taskExec()
-      ->exec("drush upwd $adminUser password");
 
-    $result = $stack->run();
+    // Perform the password reset.
+    $command = $this->taskExec("drush upwd $adminUser password");
+    $result = $command->run();
     if (!$result->wasSuccessful()) {
       return new ResultData(1, 'Admin password reset failed.');
     }
