@@ -221,18 +221,17 @@ abstract class RoboFileBase extends Tasks {
    *   Return whether the install succeeded.
    */
   public function buildComposerInstall($flags = ''): ?ResultData {
-    try {
-      $command = $this->taskExec('composer')
-        ->arg('install')
-        ->option('no-progress')
-        ->option('no-interaction');
+    $stack = $this->taskExec('composer')
+      ->arg('install')
+      ->option('no-progress')
+      ->option('no-interaction');
 
-      if (!empty($flags)) {
-        $command->arg($flags);
-      }
-      $command->run();
+    if (!empty($flags)) {
+      $stack->arg($flags);
     }
-    catch (Exception $e) {
+
+    $result = $stack->run();
+    if (!$result->wasSuccessful()) {
       return new ResultData(1, 'Composer install failed.');
     }
 
@@ -245,15 +244,15 @@ abstract class RoboFileBase extends Tasks {
   public function buildSetFilesOwner(): ?ResultData {
     $this->say('Setting ownership and permissions.');
     foreach ([$this->filePublic, $this->filePrivate, $this->fileTemp] as $path) {
-      try {
-        $this->taskFilesystemStack()
-          ->mkdir($path)
-          ->chown($path, $this->webUser)
-          ->chgrp($path, $this->localUser)
-          ->chmod($path, 0755, 0000)
-          ->run();
-      }
-      catch (Exception $e) {
+      $stack = $this->taskFilesystemStack()
+        ->stopOnFail()
+        ->mkdir($path)
+        ->chown($path, $this->webUser)
+        ->chgrp($path, $this->localUser)
+        ->chmod($path, 0755, 0000);
+
+      $result = $stack->run();
+      if (!$result->wasSuccessful()) {
         return new ResultData(1, 'File ownership failed.');
       }
     }
@@ -268,23 +267,21 @@ abstract class RoboFileBase extends Tasks {
     // Ensure configuration is writable.
     $this->devConfigWriteable();
 
-    try {
-      $this->taskExec('drush')
-        ->arg('site-install')
-        ->arg($this->drupalProfile)
-        ->arg('-y')
-        ->arg('install_configure_form.enable_update_status_module=NULL')
-        ->arg('install_configure_form.enable_update_status_emails=NULL')
-        ->option('account-mail', $this->config['site']['admin_email'])
-        ->option('account-name', $this->config['site']['admin_user'])
-        ->option('account-pass', $this->config['site']['admin_password'])
-        ->option('site-name', $this->config['site']['title'])
-        ->option('site-mail', $this->config['site']['mail'])
-        ->run();
-      $this->devConfigReadOnly();
-    }
-    catch (Exception $e) {
-      $this->devConfigReadOnly();
+    $stack = $this->taskExec('drush')
+      ->arg('site-install')
+      ->arg($this->drupalProfile)
+      ->arg('-y')
+      ->arg('install_configure_form.enable_update_status_module=NULL')
+      ->arg('install_configure_form.enable_update_status_emails=NULL')
+      ->option('account-mail', $this->config['site']['admin_email'])
+      ->option('account-name', $this->config['site']['admin_user'])
+      ->option('account-pass', $this->config['site']['admin_password'])
+      ->option('site-name', $this->config['site']['title'])
+      ->option('site-mail', $this->config['site']['mail']);
+
+    $result = $stack->run();
+    $this->devConfigReadOnly();
+    if (!$result->wasSuccessful()) {
       return new ResultData(1, 'drush site-install failed.');
     }
 
@@ -315,19 +312,19 @@ abstract class RoboFileBase extends Tasks {
    */
   public function buildClean(): ?ResultData {
     $this->setPermissions("$this->applicationRoot/sites/default", 0755);
-    try {
-      $this->taskExecStack()
-        ->exec("rm -fR $this->applicationRoot/core")
-        ->exec("rm -fR $this->applicationRoot/modules/contrib")
-        ->exec("rm -fR $this->applicationRoot/profiles/contrib")
-        ->exec("rm -fR $this->applicationRoot/themes/contrib")
-        ->exec("rm -fR $this->applicationRoot/sites/all")
-        ->exec('rm -fR bin')
-        ->exec('rm -fR vendor')
-        ->run();
-    }
-    catch (Exception $e) {
-      return new ResultData(1, 'Build failed.');
+    $stack = $this->taskExecStack()
+      ->stopOnFail()
+      ->exec("rm -fR $this->applicationRoot/core")
+      ->exec("rm -fR $this->applicationRoot/modules/contrib")
+      ->exec("rm -fR $this->applicationRoot/profiles/contrib")
+      ->exec("rm -fR $this->applicationRoot/themes/contrib")
+      ->exec("rm -fR $this->applicationRoot/sites/all")
+      ->exec('rm -fR bin')
+      ->exec('rm -fR vendor');
+
+    $result = $stack->run();
+    if (!$result->wasSuccessful()) {
+      return new ResultData(1, 'Build clean failed.');
     }
 
     return new ResultData(TRUE);
@@ -432,13 +429,13 @@ abstract class RoboFileBase extends Tasks {
    *   The result of the command.
    */
   public function devAggregateAssetsDisable($cacheClear = TRUE): ResultData {
-    try {
-      $this->taskExecStack()
-        ->exec('drush cset system.performance js.preprocess 0 -y')
-        ->exec('drush cset system.performance css.preprocess 0 -y')
-        ->run();
-    }
-    catch (Exception $e) {
+    $stack = $this->taskExecStack()
+      ->stopOnFail()
+      ->exec('drush cset system.performance js.preprocess 0 -y')
+      ->exec('drush cset system.performance css.preprocess 0 -y');
+
+    $result = $stack->run();
+    if (!$result->wasSuccessful()) {
       return new ResultData(1, 'Aggregate disable failed.');
     }
 
@@ -458,13 +455,13 @@ abstract class RoboFileBase extends Tasks {
    *   The result of the command.
    */
   public function devAggregateAssetsEnable($cacheClear = TRUE): ResultData {
-    try {
-      $this->taskExecStack()
-        ->exec('drush cset system.performance js.preprocess 1 -y')
-        ->exec('drush cset system.performance css.preprocess 1 -y')
-        ->run();
-    }
-    catch (Exception $e) {
+    $stack = $this->taskExecStack()
+      ->stopOnFail()
+      ->exec('drush cset system.performance js.preprocess 1 -y')
+      ->exec('drush cset system.performance css.preprocess 1 -y');
+
+    $result = $stack->run();
+    if (!$result->wasSuccessful()) {
       return new ResultData(1, 'Aggregate enable failed.');
     }
 
@@ -505,21 +502,43 @@ abstract class RoboFileBase extends Tasks {
    */
   public function devImportDb($sql_file): ResultData {
     $start = new DateTime();
-    try {
-      $this->taskExecStack()
-        ->exec('drush -y sql-drop')
-        ->exec("drush sqlq --file=$sql_file")
-        ->exec('drush cr')
-        ->exec('drush upwd admin --password=password')
-        ->exec('drush updb --entity-updates -y')
-        ->run();
-    }
-    catch (Exception $e) {
+    $stack = $this->taskExecStack()
+      ->stopOnFail()
+      ->exec('drush -y sql-drop')
+      ->exec("drush sqlq --file=$sql_file")
+      ->exec('drush cr');
+    $result = $stack->run();
+    if (!$result->wasSuccessful()) {
       return new ResultData(1, 'Database import failed.');
     }
 
+    $this->devResetAdminPass();
+
     $this->say('Duration: ' . date_diff(new DateTime(), $start)->format('%im %Ss'));
     $this->say('Database imported, admin user password is : password');
+
+    return new ResultData(TRUE);
+  }
+
+  /**
+   * Find the userame of user 1 which is the 'admin' user for Drupal.
+   *
+   * @return \Robo\ResultData
+   *   The result of the command.
+   */
+  public function devResetAdminPass(): ResultData {
+    $command = $this->taskExec('drush sqlq "SELECT name from users u LEFT JOIN users_field_data ud ON u.uid = ud.uid WHERE u.uid = 1"')
+      ->printOutput(FALSE)
+      ->run();
+
+    $adminUser = trim($command->getMessage());
+    $command = $this->taskExec()
+      ->exec("drush upwd $adminUser password");
+
+    $result = $stack->run();
+    if (!$result->wasSuccessful()) {
+      return new ResultData(1, 'Admin password reset failed.');
+    }
 
     return new ResultData(TRUE);
   }
@@ -569,6 +588,7 @@ abstract class RoboFileBase extends Tasks {
   protected function setPermissions($file, $permission): void {
     if (file_exists($file)) {
       $this->taskFilesystemStack()
+        ->stopOnFail()
         ->chmod($file, (int) $permission, 0000)
         ->run();
     }
