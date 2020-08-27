@@ -8,81 +8,73 @@ services:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
     image: singularo/s2i-shepherd-drupal-dev
-    # You will notice that we are forwarding port which do not belong to PHP.
-    # We have to declare them here because these "sidecar" services are sharing
-    # THIS containers network stack.
-    ports:
-      - "80:8080"
-      - "3306:3306"
-      - "8025:8025"
-      - "9990:9990"
-      - "11211:11211"
+    hostname: ${PROJECT}
     environment:
+      DATABASE_HOST: db
+      DATABASE_USER: user
+      DATABASE_PASSWORD: password
       HASH_SALT: random-hash
       MEMCACHE_ENABLED: 0
-      PHP_IDE_CONFIG: serverName=localhost
+      MEMCACHE_HOST: memcached
+      PHP_IDE_CONFIG: serverName=${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}
       PUBLIC_DIR: /shared/public
-      # Define this in an env var based on what you are installing.
-      # SHEPHERD_INSTALL_PROFILE:
       REDIS_ENABLED: 0
-      SHEPHERD_SITE_ID: 2
+      REDIS_HOST: redis
       SHEPHERD_SECRET_PATH: /code/private
-      SHEPHERD_TOKEN: super-secret-token
-      SHEPHERD_URL: http://localhost
       SITE_TITLE: Drupal site
       SITE_MAIL: site@example.com
       SITE_ADMIN_EMAIL: admin@example.com
       SITE_ADMIN_USERNAME: admin
       SITE_ADMIN_PASSWORD: password
-      XDEBUG_CONFIG: "remote_host=docker.for.mac.localhost"
+      SSH_AUTH_SOCK: /run/host-services/ssh-auth.sock
+      TMP_DIR: /shared/tmp
 
-      # Local variables
-      SHEPHERD_INSTALL_PROFILE: standard
+      # Use jwilder/nginx-proxy for virtual hosts.
+      VIRTUAL_HOST: ${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}
+      # Do not define this as '/' or apache2 will give strange behaviour, to test locally,
+      # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
+      # WEB_PATH: /subpath
+      XDEBUG_CONFIG: "remote_host=docker.for.mac.localhost"
     volumes:
+      - /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
       - nfsmount:/code
       - ./shared:/shared
-      - $HOME/.ssh:/home/www-data/.ssh
+    networks:
+      - default
 
   xdebug:
     image: nickschuch/d4m-tcp-forwarder
-    network_mode: host
     environment:
       - PORT=9000
+    networks:
+      - default
 
   db:
     image: mariadb
-    network_mode: service:web
     environment:
       MYSQL_DATABASE: drupal
       MYSQL_USER: user
       MYSQL_PASSWORD: password
       MYSQL_ROOT_PASSWORD: super-secret-password
+    networks:
+      - default
 
   mail:
     image: mailhog/mailhog
-    network_mode: service:web
+    environment:
+      VIRTUAL_HOST: mail.${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}
+    networks:
+      - default
 
   redis:
     image: redis:alpine
-    command: |
-      redis-server
-      --maxmemory 512Mi
-      --maxmemory-policy allkeys-lru
-      --save ""
-    # --requirepass password
-    network_mode: service:web
+    networks:
+      - default
 
   memcached:
     image: memcached:alpine
     networks:
       - default
-    network_mode: service:web
-
-  selenium:
-    image: selenium/standalone-chrome:3.141.59-oxygen
-    network_mode: service:web
-    volumes:
-      - /dev/shm:/dev/shm
 
 volumes:
   nfsmount:

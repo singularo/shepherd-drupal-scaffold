@@ -4,16 +4,19 @@
 # for mac (linux happens automatically)
 #
 
-# Try setup for linux
-export SSH_AUTH_SOCK=/ssh/ssh
+# If the new style socket exists on mac, make it accessible.
+if [ -S /run/host-services/ssh-auth.sock ]; then
+  sudo chmod 777 /run/host-services/ssh-auth.sock
+fi
 
-# Check if we have any identities, if not, try and setup
-if ! ssh-add -l > /dev/null; then
+# Check if we now have any identities, if not, try and setup manually.
+ssh-add -l &> /dev/null
+if [ "$?" == 2 ]; then
   eval $(ssh-agent -s)
   ssh-add ~/.ssh/id_rsa
 fi
 
-# Symlink the vendor binaries into a nice place.
+# Symlink the vendor binaries into a convenient place.
 if [ ! -L bin ]; then
   ln -s ./vendor/bin bin
 fi
