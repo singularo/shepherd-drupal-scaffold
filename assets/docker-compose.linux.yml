@@ -38,6 +38,7 @@ services:
     volumes:
       - .:/code
       - ./shared:/shared
+      - ./shared/public:/code/web/sites/default/files
       - ${XDG_RUNTIME_DIR}/keyring:/ssh
     networks:
       - default

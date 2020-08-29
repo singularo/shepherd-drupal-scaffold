@@ -39,6 +39,7 @@ services:
       - /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
       - nfsmount:/code
       - ./shared:/shared
+      - ./shared/public:/code/web/sites/default/files
     networks:
       - default
 
