@@ -1,1 +1,11 @@
 .idea
+/autoload.php
+/composer.lock
+/docker-compose.darwin.yml
+/docker-compose.linux.yml
+/dsh
+/dsh_bash
+/RoboFile.php
+/RoboFileBase.php
+/vendor/
+/docker/

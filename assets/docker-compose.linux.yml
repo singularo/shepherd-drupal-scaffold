@@ -35,6 +35,13 @@ services:
       # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
       # WEB_PATH: /subpath
       XDEBUG_CONFIG: "remote_host=172.17.0.1"
+
+      # Pass in the vars defined in .env, or define them here.
+      PROJECT:
+      SHEPHERD_INSTALL_PROFILE:
+      DRUSH_OPTIONS_URI:
+      SITE_UUID:
+
     volumes:
       - .:/code
       - ./shared:/shared

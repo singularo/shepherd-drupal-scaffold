@@ -23,7 +23,7 @@ class RoboFile extends RoboFileBase {
   /**
    * Example of overriding the constructor.
    *
-   * Coding standards ignored as its an empty.
+   * Coding standards ignored as its empty.
    */
   public function __construct() {
     parent::__construct();

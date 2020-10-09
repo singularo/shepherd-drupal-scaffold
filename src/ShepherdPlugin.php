@@ -21,19 +21,19 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    *
    * @var \Composer\Composer
    */
-  protected $composer;
+  protected Composer $composer;
 
   /**
    * IO object.
    *
    * @var \Composer\IO\IOInterface
    */
-  protected $io;
+  protected IOInterface $io;
 
   /**
    * {@inheritdoc}
    */
-  public function activate(Composer $composer, IOInterface $io) {
+  public function activate(Composer $composer, IOInterface $io): void {
     $this->composer = $composer;
     $this->io = $io;
   }
@@ -41,13 +41,13 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
   /**
    * {@inheritdoc}
    */
-  public function deactivate(Composer $composer, IOInterface $io) {
+  public function deactivate(Composer $composer, IOInterface $io): void {
   }
 
   /**
    * {@inheritdoc}
    */
-  public function uninstall(Composer $composer, IOInterface $io) {
+  public function uninstall(Composer $composer, IOInterface $io): void {
   }
 
   /**
@@ -58,6 +58,7 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
       // Run the pre installs before anything else.
       ScriptEvents::PRE_UPDATE_CMD => ['preInstall', 99],
       ScriptEvents::PRE_INSTALL_CMD => ['preInstall', 99],
+
       // Run the post installs after everything else.
       ScriptEvents::POST_CREATE_PROJECT_CMD => ['postInstall', -99],
       ScriptEvents::POST_INSTALL_CMD => ['postInstall', -99],
@@ -69,8 +70,10 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    * Post update command event to execute the scaffolding.
    *
    * @param \Composer\Script\Event $event
+   *
+   * @throws \Exception
    */
-  public function postInstall(Event $event) {
+  public function postInstall(Event $event): void {
     $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
     $shepherd->makeReadWrite();
     $event->getIO()->write('Creating settings.php file if not present.');
@@ -80,7 +83,12 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
     $shepherd->ensureShared();
   }
 
-  public function preInstall(Event $event) {
+  /**
+   * Pre install command event to ensure permissions are usable.
+   *
+   * @param \Composer\Script\Event $event
+   */
+  public function preInstall(Event $event): void {
     $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
     $event->getIO()->write('Restoring write permissions on settings files.');
     $shepherd->makeReadWrite();

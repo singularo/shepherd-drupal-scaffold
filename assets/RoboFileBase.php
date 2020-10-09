@@ -13,7 +13,7 @@ use Robo\Tasks;
 use Robo\ResultData;
 
 /**
- * Class RoboFileBase.
+ * Implement specific functions to enable Drupal install builds.
  */
 abstract class RoboFileBase extends Tasks {
 
@@ -22,99 +22,51 @@ abstract class RoboFileBase extends Tasks {
    *
    * @var string
    */
-  protected $drupalProfile;
-
-  /**
-   * The current user.
-   *
-   * @var string
-   */
-  protected $localUser;
+  protected string $drupalProfile;
 
   /**
    * The web server user.
    *
    * @var string
    */
-  protected $webUser = 'www-data';
+  protected string $webUser = 'www-data';
 
   /**
    * The application root.
    *
    * @var string
    */
-  protected $applicationRoot = '/code/web';
+  protected string $applicationRoot = '/code/web';
 
   /**
    * The path to the public files directory.
    *
-   * @var string
+   * @var array
    */
-  protected $filePublic = '/shared/public';
-
-  /**
-   * The path to the private files directory.
-   *
-   * @var string
-   */
-  protected $filePrivate = '/shared/private';
-
-  /**
-   * The path to the temporary files directory.
-   *
-   * @var string
-   */
-  protected $fileTemp = '/shared/tmp';
+  protected array $filePaths = [
+    '/shared/public',
+    '/shared/private',
+    '/shared/tmp',
+  ];
 
   /**
    * The path to the services file.
    *
    * @var string
    */
-  protected $servicesYml = 'web/sites/default/services.yml';
+  protected string $servicesYml = 'web/sites/default/services.yml';
 
   /**
    * The config we're going to export.
    *
    * @var array
    */
-  protected $config = [];
-
-  /**
-   * The path to the config dir.
-   *
-   * @var string
-   */
-  protected $configDir = '/code/config-export';
-
-  /**
-   * The path to the config install dir.
-   *
-   * @var string
-   */
-  protected $configInstallDir = '/code/config-install';
-
-  /**
-   * The path to the config delete list.
-   *
-   * @var string
-   */
-  protected $configDeleteList = '/code/drush/config-delete.yml';
-
-  /**
-   * The path to the config delete list.
-   *
-   * @var string
-   */
-  protected $configIgnoreList = '/code/drush/config-ignore.yml';
+  protected array $config = [];
 
   /**
    * Initialize config variables and apply overrides.
    */
   public function __construct() {
-    // Retrieve current username.
-    $this->localUser = $this->getLocalUser();
-
     // Read config from environment variables.
     $environmentConfig = $this->readConfigFromEnv();
     $this->config = array_merge($this->config, $environmentConfig);
@@ -134,6 +86,20 @@ abstract class RoboFileBase extends Tasks {
 
     $this->drupalProfile = $profile;
     return new ResultData(TRUE);
+  }
+
+  /**
+   * Retrieve the site UUID.
+   *
+   * Once config is set, its likely that the UUID will need to be consistent
+   * across builds. This function is used as part of the build to get that
+   * from an environment var, often defined in the docker-compose.*.yml file.
+   *
+   * @return string|bool
+   *   Return either a valid site uuid, or false if there is none.
+   */
+  protected function getSiteUuid() {
+    return getenv('SITE_UUID');
   }
 
   /**
@@ -184,6 +150,11 @@ abstract class RoboFileBase extends Tasks {
     $this->buildComposerInstall();
     $this->buildSetFilesOwner();
     $this->buildInstall();
+    if ($uuid = $this->getSiteUuid()) {
+      $this->_exec("drush config-set system.site uuid $uuid -y");
+      $this->devCacheRebuild();
+      $this->_exec("drush cim -y --partial");
+    }
     $this->devCacheRebuild();
     $this->buildSetFilesOwner();
     $this->devXdebugEnable();
@@ -243,12 +214,12 @@ abstract class RoboFileBase extends Tasks {
    */
   public function buildSetFilesOwner(): ?ResultData {
     $this->say('Setting ownership and permissions.');
-    foreach ([$this->filePublic, $this->filePrivate, $this->fileTemp] as $path) {
+    foreach ($this->filePaths as $path) {
       $stack = $this->taskFilesystemStack()
         ->stopOnFail()
         ->mkdir($path)
         ->chown($path, $this->webUser)
-        ->chgrp($path, $this->localUser)
+        ->chgrp($path, $this->getLocalUser())
         ->chmod($path, 0755, 0000);
 
       $result = $stack->run();
@@ -309,6 +280,8 @@ abstract class RoboFileBase extends Tasks {
 
   /**
    * Clean the application root in preparation for a new build.
+   *
+   * @throws \Robo\Exception\TaskException
    */
   public function buildClean(): ?ResultData {
     $this->setPermissions("$this->applicationRoot/sites/default", 0755);
@@ -370,6 +343,8 @@ abstract class RoboFileBase extends Tasks {
 
   /**
    * Turns on twig debug mode, auto reload on and caching off.
+   *
+   * @throws \Robo\Exception\TaskException
    */
   public function devTwigDebugEnable(): void {
     $this->devConfigWriteable();
@@ -427,6 +402,8 @@ abstract class RoboFileBase extends Tasks {
    *
    * @return \Robo\ResultData
    *   The result of the command.
+   *
+   * @throws \Robo\Exception\TaskException
    */
   public function devAggregateAssetsDisable($cacheClear = TRUE): ResultData {
     $stack = $this->taskExecStack()
@@ -453,6 +430,8 @@ abstract class RoboFileBase extends Tasks {
    *
    * @return \Robo\ResultData
    *   The result of the command.
+   *
+   * @throws \Robo\Exception\TaskException
    */
   public function devAggregateAssetsEnable($cacheClear = TRUE): ResultData {
     $stack = $this->taskExecStack()
@@ -499,8 +478,10 @@ abstract class RoboFileBase extends Tasks {
    *
    * @return \Robo\ResultData
    *   The result of the command.
+   *
+   * @throws \Robo\Exception\TaskException
    */
-  public function devImportDb($sql_file): ResultData {
+  public function devImportDb(string $sql_file): ResultData {
     $start = new DateTime();
     $stack = $this->taskExecStack()
       ->stopOnFail()
@@ -582,10 +563,10 @@ abstract class RoboFileBase extends Tasks {
    *
    * @param string $file
    *   File to modify.
-   * @param string $permission
+   * @param int $permission
    *   Permissions. E.g. '0644'.
    */
-  protected function setPermissions($file, $permission): void {
+  protected function setPermissions(string $file, int $permission): void {
     if (file_exists($file)) {
       $this->taskFilesystemStack()
         ->stopOnFail()
@@ -616,7 +597,7 @@ abstract class RoboFileBase extends Tasks {
    * @return \Robo\ResultData
    *   The result of the command.
    */
-  protected function checkFail($successful, $message = ''): ResultData {
+  protected function checkFail(bool $successful, $message = ''): ResultData {
     if (!$successful) {
       $this->say('APP_ERROR: ' . $message);
       // Prevent any other tasks from executing.
