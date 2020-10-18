@@ -16,10 +16,5 @@ if [ "$?" == 2 ]; then
   ssh-add ~/.ssh/id_rsa
 fi
 
-# Symlink the vendor binaries into a convenient place.
-if [ ! -L bin ]; then
-  ln -s ./vendor/bin bin
-fi
-
 # Drop user into bash
 bash -l

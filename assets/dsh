@@ -17,17 +17,9 @@ export USER_ID=$(id -u ${USER})
 export GROUP_ID=$(id -g ${USER})
 
 # Setup some functions to output warnings.
-notice() {
-  printf "\e[32;01m$1\e[39;49;00m\n"
-}
-
-warning() {
-  printf "\e[33;01m$1\e[39;49;00m\n"
-}
-
-error() {
-  printf "\e[31;01m$1\e[39;49;00m\n"
-}
+notice()  { printf "\e[32;01m$1\e[39;49;00m\n" }
+warning() { printf "\e[33;01m$1\e[39;49;00m\n" }
+error()   { printf "\e[31;01m$1\e[39;49;00m\n" }
 
 # Ensure script is NOT running inside a container - must be run from host.
 if [ -f /.dockerenv ]; then
@@ -35,13 +27,54 @@ if [ -f /.dockerenv ]; then
   exit
 fi
 
+# Add functionality to the dsh setup/start function
+setup_nginx() {
+  # Check if its running/exists already and start if required.
+  if docker ps -a --format "{{.Names}}" | grep nginx-proxy > /dev/null; then
+    docker start nginx-proxy > /dev/null
+  else
+    echo "Starting nginx proxy"
+    docker run -d -p 8080:80  \
+      -v /var/run/docker.sock:/tmp/docker.sock:ro \
+      --restart always --name nginx-proxy \
+      jwilder/nginx-proxy:latest
+  fi
+
+  if ! docker ps --format "{{.Names}}" --filter "name=nginx-proxy" > /dev/null; then
+    error "jwilder/nginx-proxy could not be started."
+  fi
+
+  set +e
+  export URL="http://${PROJECT}.${DOMAIN}:8080"
+  NGINX_IP=$(docker inspect --format "{{with index .NetworkSettings.Networks \"${PROJECT}_default\"}}{{.IPAddress}}{{end}}" nginx-proxy)
+  if [[ ! ${NGINX_IP} =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    notice "Connecting nginx-proxy to the network."
+    docker network connect ${PROJECT}_default nginx-proxy
+  fi
+  set -e
+}
+
+# Add functionality to the dsh stop function
+stop_nginx() {
+  if [ "${USE_NGINX}" == "1" ]; then
+    if docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default" > /dev/null; then
+      notice "Disconnecting nginx proxy from network."
+      set +e
+      docker network disconnect ${PROJECT}_default nginx-proxy > /dev/null
+      set -e
+    fi
+  fi
+}
+
 # Command: ./dsh start
 # Configures environment then brings up project using docker-compose.yml file.
 dsh_start() {
-  # Make the shared directory to avoid permission issues from docker.
-  mkdir -p ./shared
-
   notice "Starting project containers."
+  if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default") =~ "${PROJECT}_default" ]]; then
+    docker network create ${PROJECT}_default
+  fi
+  setup_nginx
+
   docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
   export URL="http://${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}"
   notice "Please wait about 10 seconds for the database to settle.
