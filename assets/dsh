@@ -17,9 +17,9 @@ export USER_ID=$(id -u ${USER})
 export GROUP_ID=$(id -g ${USER})
 
 # Setup some functions to output warnings.
-notice()  { printf "\e[32;01m$1\e[39;49;00m\n" }
-warning() { printf "\e[33;01m$1\e[39;49;00m\n" }
-error()   { printf "\e[31;01m$1\e[39;49;00m\n" }
+notice()  { printf "\e[32;01m$1\e[39;49;00m\n"; }
+warning() { printf "\e[33;01m$1\e[39;49;00m\n"; }
+error()   { printf "\e[31;01m$1\e[39;49;00m\n"; }
 
 # Ensure script is NOT running inside a container - must be run from host.
 if [ -f /.dockerenv ]; then
