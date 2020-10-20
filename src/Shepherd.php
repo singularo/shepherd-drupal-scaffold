@@ -142,6 +142,7 @@ class Shepherd {
       $this->projectPath . '/shared/public',
       $this->projectPath . '/shared/private',
       $this->projectPath . '/shared/tmp',
+      $this->root . '/sites/default/files',
     ], 0755);
   }
 
