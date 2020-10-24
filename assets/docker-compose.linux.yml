@@ -76,3 +76,11 @@ services:
     image: memcached:alpine
     networks:
       - default
+
+  blackfire:
+    image: blackfire/blackfire
+    environment:
+      BLACKFIRE_SERVER_ID:
+      BLACKFIRE_SERVER_TOKEN:
+    networks:
+      - default
