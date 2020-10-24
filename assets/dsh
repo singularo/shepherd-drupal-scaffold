@@ -4,22 +4,34 @@
 set -euo pipefail
 
 # Used as the prefix for docker networking, container naming and nginx hostname.
-export PROJECT=$(basename ${PWD})
-export DOCKER_COMPOSE_FILE="docker-compose.$(uname | tr '[:upper:]' '[:lower:]').yml"
+PROJECT=$(basename "${PWD}")
+HOST_TYPE=$(uname | tr '[:upper:]' '[:lower:]')
+DOCKER_COMPOSE_FILE="docker-compose.${HOST_TYPE}.yml"
+
+# Set domain default if its not set.
+set +u
+if [ -z "${DOMAIN}" ]; then
+  if [[ "${HOST_TYPE}" =~ 'darwin' ]]; then
+    DOMAIN="127.0.0.1.xip.io"
+  else
+    DOMAIN="172.17.0.1.xip.io"
+  fi
+fi
+set -u
 
 # Ultimately permit overriding repo docker-compose.yml with custom file.
 if [ -f docker-compose.yml ]; then
-  export DOCKER_COMPOSE_FILE='docker-compose.yml'
+  DOCKER_COMPOSE_FILE='docker-compose.yml'
 fi
 
 # Set user variables
-export USER_ID=$(id -u ${USER})
-export GROUP_ID=$(id -g ${USER})
+USER_ID=$(id -u "${USER}")
+GROUP_ID=$(id -g "${USER}")
 
 # Setup some functions to output warnings.
-notice()  { printf "\e[32;01m$1\e[39;49;00m\n" }
-warning() { printf "\e[33;01m$1\e[39;49;00m\n" }
-error()   { printf "\e[31;01m$1\e[39;49;00m\n" }
+notice()  { printf "\e[32;01m%s\e[39;49;00m\n" "$1"; }
+warning() { printf "\e[33;01m%s\e[39;49;00m\n" "$1"; }
+error()   { printf "\e[31;01m%s\e[39;49;00m\n" "$1"; }
 
 # Ensure script is NOT running inside a container - must be run from host.
 if [ -f /.dockerenv ]; then
@@ -33,7 +45,7 @@ setup_nginx() {
   if docker ps -a --format "{{.Names}}" | grep nginx-proxy > /dev/null; then
     docker start nginx-proxy > /dev/null
   else
-    echo "Starting nginx proxy"
+    warning "Starting nginx proxy"
     docker run -d -p 8080:80  \
       -v /var/run/docker.sock:/tmp/docker.sock:ro \
       --restart always --name nginx-proxy \
@@ -45,24 +57,22 @@ setup_nginx() {
   fi
 
   set +e
-  export URL="http://${PROJECT}.${DOMAIN}:8080"
+  URL="http://${PROJECT}.${DOMAIN}:8080"
   NGINX_IP=$(docker inspect --format "{{with index .NetworkSettings.Networks \"${PROJECT}_default\"}}{{.IPAddress}}{{end}}" nginx-proxy)
   if [[ ! ${NGINX_IP} =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     notice "Connecting nginx-proxy to the network."
-    docker network connect ${PROJECT}_default nginx-proxy
+    docker network connect "${PROJECT}_default" nginx-proxy
   fi
   set -e
 }
 
 # Add functionality to the dsh stop function
 stop_nginx() {
-  if [ "${USE_NGINX}" == "1" ]; then
-    if docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default" > /dev/null; then
-      notice "Disconnecting nginx proxy from network."
-      set +e
-      docker network disconnect ${PROJECT}_default nginx-proxy > /dev/null
-      set -e
-    fi
+  if docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default" > /dev/null; then
+    notice "Disconnecting nginx proxy from network."
+    set +e
+    docker network disconnect "${PROJECT}_default" nginx-proxy > /dev/null
+    set -e
   fi
 }
 
@@ -70,13 +80,13 @@ stop_nginx() {
 # Configures environment then brings up project using docker-compose.yml file.
 dsh_start() {
   notice "Starting project containers."
-  if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default") =~ "${PROJECT}_default" ]]; then
-    docker network create ${PROJECT}_default
+  if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default") =~ ${PROJECT}_default ]]; then
+    docker network create "${PROJECT}_default"
   fi
   setup_nginx
 
   docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
-  export URL="http://${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}"
+  URL="http://${PROJECT}.${DOMAIN}"
   notice "Please wait about 10 seconds for the database to settle.
 You can now access the site from ${URL}.
 Project files are available in /code, You may need to build and install your
@@ -92,7 +102,7 @@ dsh_shell() {
   docker-compose -f ${DOCKER_COMPOSE_FILE} exec \
    -e COLUMNS="$(tput cols)" \
    -e LINES="$(tput lines)" \
-   web ${@:-./dsh_bash}
+   web "${@:-./dsh_bash}"
 }
 
 # Command: ./dsh stop
@@ -149,52 +159,49 @@ dsh_pull() {
 NFS_FILE=/etc/exports
 NFS_LINE="/Users -alldirs -mapall=${USER_ID}:${GROUP_ID} localhost"
 dsh_setup_nfs() {
-  if [ $(uname) != "Darwin" ]; then
-    echo "This script is OSX-only. Please do not run it on any other Unix."
+  if [ "$(uname)" != "Darwin" ]; then
+    notice "This script is OSX-only. Please do not run it on any other Unix."
     exit 1
   fi
 
   if [[ ${EUID} -eq 0 ]]; then
-    echo "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
+    notice "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
     exit 1
   fi
 
-  echo ""
-  echo " +-----------------------------+"
-  echo " | Setup native NFS for Docker |"
-  echo " +-----------------------------+"
-  echo ""
+  notice " +-----------------------------+"
+  notice " | Setup native NFS for Docker |"
+  notice " +-----------------------------+"
 
-  echo "WARNING: This script will shut down running containers."
-  echo ""
-  echo -n "Do you wish to proceed? [y]: "
-  read DECISION
+  warning "WARNING: This script will shut down running containers."
+  warning -n "Do you wish to proceed? [y]: "
+  read -r DECISION
 
   if [ "${DECISION}" != "y" ]; then
-    echo "Exiting. No changes made."
+    warning "Exiting. No changes made."
     exit 1
   fi
 
-  echo ""
-
   if ! docker ps > /dev/null 2>&1 ; then
-    echo "== Waiting for docker to start..."
+    notice "== Waiting for docker to start..."
   fi
 
   open -a Docker
 
   while ! docker ps > /dev/null 2>&1 ; do sleep 2; done
 
-  echo "== Stopping running docker containers..."
+  notice "== Stopping running docker containers..."
+  set +e
   docker-compose -f ${DOCKER_COMPOSE_FILE} down > /dev/null 2>&1
   docker volume prune -f > /dev/null
+  set -e
 
   osascript -e 'quit app "Docker"'
 
-  echo "== Resetting folder permissions..."
+  notice "== Resetting folder permissions..."
   sudo chown -R "${USER_ID}:${GROUP_ID}" .
 
-  echo "== Setting up nfs..."
+  notice "== Setting up nfs..."
   sudo cp /dev/null "${NFS_FILE}"
   grep -qF -- "${NFS_LINE}" "${NFS_FILE}" || sudo echo "${NFS_LINE}" | sudo tee -a "${NFS_FILE}" > /dev/null
 
@@ -202,56 +209,55 @@ dsh_setup_nfs() {
   FILE=/etc/nfs.conf
   grep -qF -- "${LINE}" "${FILE}" || sudo echo "${LINE}" | sudo tee -a "${FILE}" > /dev/null
 
-  echo "== Restarting nfsd..."
+  notice "== Restarting nfsd..."
   sudo nfsd restart
 
-  echo "== Restarting docker..."
+  notice "== Restarting docker..."
   open -a Docker
 
   while ! docker ps > /dev/null 2>&1 ; do sleep 2; done
 
-  echo ""
-  echo "SUCCESS! Now go run your containers 🐳"
+  notice "SUCCESS! Now go run your containers 🐳"
 }
 
 # Command: ./dsh rnfs
 # Removes nfs setup.
 dsh_remove_nfs() {
-  if [ $(uname) != "Darwin" ]; then
-    echo "This script is OSX-only. Please do not run it on any other Unix."
+  if [ "$(uname)" != "Darwin" ]; then
+    notice "This script is OSX-only. Please do not run it on any other Unix."
     exit 1
   fi
 
   if [[ ${EUID} -eq 0 ]]; then
-    echo "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
+    notice "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
     exit 1
   fi
 
-  echo "== Removing nfsd exports..."
+  notice "== Removing nfsd exports..."
   sudo sed -i '' "/$(echo "${NFS_LINE}" | sed 's/\//\\\//g')/d" ${NFS_FILE}
-  echo "== Restarting nfsd..."
+  warning "== Restarting nfsd..."
   sudo nfsd restart
-  echo "== Done"
+  warning "== Done"
 }
 
 dsh_help() {
   printf "\nUsage: dsh COMMAND\n
 Commands:
-\tdown\tShutdown and destroy the containers.
-\texec\tExecute a command in the container.
-\thelp\tShow this help.
-\tlogs\tShow the container logs with tail -f - ctrl-c to exit.
-\tpull\tPull the latest container images.
-\tpurge\tPurge the docker containers, network and proxy and remove all data.
-\tshell\tStart a shell which is connected to the containers and can be used to run commands.
-\tstart\tStart the docker containers, network and proxy.
-\tstatus\tShow the status of this projects containers.
-\tstop\tStop the docker containers, network and proxy, but keep data for a re-start.
+\t down\tShutdown and destroy the containers.
+\t exec\tExecute a command in the container.
+\t help\tShow this help.
+\t logs\tShow the container logs with tail -f - ctrl-c to exit.
+\t pull\tPull the latest container images.
+\t purge\tPurge the docker containers, network and proxy and remove all data.
+\t shell\tStart a shell which is connected to the containers and can be used to run commands.
+\t start\tStart the docker containers, network and proxy.
+\t status\tShow the status of this projects containers.
+\t stop\tStop the docker containers, network and proxy, but keep data for a re-start.
 Mac specific setup:
-\tnfs\tSetup NFS for macOS.
-\trnfs\tRemove NFS for macOS.
+\t nfs\tSetup NFS for macOS.
+\t rnfs\tRemove NFS for macOS.
 \nIf no command is given, shell is the default.
-Commands can be shortened to their uniqe component, eg ./dsh sh is the same as ./dsh shell.\n\n"
+Commands can be shortened to their unique component, eg ./dsh sh is the same as ./dsh shell.\n\n"
 }
 
 # Set a default command to show usage when no arguments provided.
@@ -262,7 +268,7 @@ case ${COMMAND} in
     dsh_down
     ;;
   e*)
-    dsh_shell ${@:2}
+    dsh_shell "${@:2}"
     ;;
   h*|-h|--help)
     dsh_help
@@ -283,7 +289,7 @@ case ${COMMAND} in
     dsh_remove_nfs
     ;;
   sh*|ss*)
-    dsh_shell ${@:2}
+    dsh_shell "${@:2}"
     ;;
   star*)
     dsh_start
@@ -295,7 +301,8 @@ case ${COMMAND} in
     dsh_stop
     ;;
   *)
-    warning "Unknown command specified, defaulting to shell. For other options try:\n$0 [down|help|logs|purge|shell|start|status|stop].\n"
+    warning "Unknown command specified, defaulting to shell. For other options try:"
+    warning "$0 [down|exec|help|logs|nfs|pull|purge|rnfs|shell|start|status|stop]."
     dsh_shell
     ;;
 esac

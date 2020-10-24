@@ -30,7 +30,7 @@ services:
       TMP_DIR: /shared/tmp
 
       # Use jwilder/nginx-proxy for virtual hosts.
-      VIRTUAL_HOST: ${PROJECT}.${DOMAIN}
+      VIRTUAL_HOST: ${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}
       # Do not define this as '/' or apache2 will give strange behaviour, to test locally,
       # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
       # WEB_PATH: /subpath
@@ -63,7 +63,7 @@ services:
   mail:
     image: mailhog/mailhog
     environment:
-      VIRTUAL_HOST: mail.${PROJECT}.${DOMAIN}
+      VIRTUAL_HOST: mail.${PROJECT}.${DOMAIN:-172.17.0.1.xip.io}
     networks:
       - default
 
