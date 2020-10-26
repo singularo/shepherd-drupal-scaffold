@@ -62,7 +62,7 @@ if (getenv('MEMCACHE_ENABLED')) {
 if (getenv('SHEPHERD_SECRET_PATH')) {
   $settings['shepherd_secrets'] = [];
   // Glob the secret path for secrets, that match pattern
-  foreach ( glob( rtrim(getenv('SHEPHERD_SECRET_PATH'),DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'SHEPHERD_*') as $secret) {
+  foreach ( glob( rtrim(getenv('SHEPHERD_SECRET_PATH'),DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'SHEPHERD_*', 0) as $secret) {
     $settings['shepherd_secrets'][pathinfo($secret)['filename']] = file_get_contents($secret);
   }
 }
