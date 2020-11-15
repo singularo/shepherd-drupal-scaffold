@@ -520,7 +520,7 @@ abstract class RoboFileBase extends Tasks {
       return new ResultData(1, 'Admin password reset failed.');
     }
 
-    $this->say("Database imported, $adminUser password is: password");
+    $this->say("Database imported, admin user is: $adminUser password is: password");
     return new ResultData(TRUE);
   }
 
