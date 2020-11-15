@@ -496,7 +496,6 @@ abstract class RoboFileBase extends Tasks {
     $this->devResetAdminPass();
 
     $this->say('Duration: ' . date_diff(new DateTime(), $start)->format('%im %Ss'));
-    $this->say('Database imported, admin user password is : password');
 
     return new ResultData(TRUE);
   }
@@ -521,6 +520,7 @@ abstract class RoboFileBase extends Tasks {
       return new ResultData(1, 'Admin password reset failed.');
     }
 
+    $this->say('Database imported, $adminUser password is: password');
     return new ResultData(TRUE);
   }
 
