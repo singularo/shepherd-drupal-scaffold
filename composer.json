@@ -43,6 +43,10 @@
           "path": "assets/docker/xdebug.ini",
           "overwrite": false
         },
+        "[project-root]/docker/custom.ini": {
+          "path": "assets/docker/custom.ini",
+          "overwrite": false
+        },
         "[project-root]/dsh_bash": {
           "path": "assets/dsh_bash",
           "overwrite": false
