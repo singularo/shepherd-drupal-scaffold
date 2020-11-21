@@ -50,6 +50,7 @@ RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
 RUN wget -q https://getcomposer.org/installer -O - | php -d allow_url_fopen=On -- --install-dir=/usr/local/bin --filename=composer --version=1.10.16
 
 COPY ./docker/xdebug.ini /etc/php/${PHP_VERSION}/mods-available/xdebug.ini
+COPY ./docker/custom.ini /etc/php/${PHP_VERSION}/mods-available/custom.ini
 
 RUN echo "www-data ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/www-data
 RUN echo "Set disable_coredump false" >> /etc/sudo.conf
