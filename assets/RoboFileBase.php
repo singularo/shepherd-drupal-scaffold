@@ -222,8 +222,6 @@ abstract class RoboFileBase extends Tasks {
       $stack = $this->taskFilesystemStack()
         ->stopOnFail()
         ->mkdir($path)
-        ->chown($path, $this->getLocalUser())
-        ->chgrp($path, $this->getLocalUser())
         ->chmod($path, 0755, 0000);
 
       $result = $stack->run();
@@ -577,17 +575,6 @@ abstract class RoboFileBase extends Tasks {
         ->chmod($file, (int) $permission, 0000)
         ->run();
     }
-  }
-
-  /**
-   * Return the name of the local user.
-   *
-   * @return string
-   *   Returns the current user.
-   */
-  protected function getLocalUser(): string {
-    $user = posix_getpwuid(posix_getuid());
-    return $user['name'];
   }
 
   /**
