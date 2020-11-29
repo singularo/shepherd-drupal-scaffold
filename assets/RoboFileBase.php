@@ -25,13 +25,6 @@ abstract class RoboFileBase extends Tasks {
   protected string $drupalProfile;
 
   /**
-   * The web server user.
-   *
-   * @var string
-   */
-  protected string $webUser = 'www-data';
-
-  /**
    * The application root.
    *
    * @var string
@@ -48,6 +41,13 @@ abstract class RoboFileBase extends Tasks {
     '/shared/private',
     '/shared/tmp',
   ];
+
+  /**
+   * Shared filesystem prefix for tmp dir/testing.
+   *
+   * @var string
+   */
+  protected string $sharedPrefix = '';
 
   /**
    * The path to the services file.
@@ -122,6 +122,9 @@ abstract class RoboFileBase extends Tasks {
 
     // Environment.
     $config['environment']['hash_salt'] = getenv('HASH_SALT');
+
+    // Allow for shared file prefix.
+    $this->sharedPrefix = getenv("SHARED_PREFIX") ?: '';
 
     // Clean up NULL values and empty arrays.
     $array_clean = static function (&$item) use (&$array_clean) {
@@ -215,10 +218,11 @@ abstract class RoboFileBase extends Tasks {
   public function buildSetFilesOwner(): ?ResultData {
     $this->say('Setting ownership and permissions.');
     foreach ($this->filePaths as $path) {
+      $path = $this->sharedPrefix . $path;
       $stack = $this->taskFilesystemStack()
         ->stopOnFail()
         ->mkdir($path)
-        ->chown($path, $this->webUser)
+        ->chown($path, $this->getLocalUser())
         ->chgrp($path, $this->getLocalUser())
         ->chmod($path, 0755, 0000);
 
