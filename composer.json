@@ -47,6 +47,10 @@
           "path": "assets/docker/custom.ini",
           "overwrite": false
         },
+        "[project-root]/drush/drush.yml": {
+          "path": "assets/drush/drush.yml",
+          "overwrite": false
+        },
         "[project-root]/dsh_bash": {
           "path": "assets/dsh_bash",
           "overwrite": false

@@ -80,6 +80,7 @@ stop_nginx() {
 # Configures environment then brings up project using docker-compose.yml file.
 dsh_start() {
   notice "Starting project containers."
+  # Too slow to leave in # docker-compose -f ${DOCKER_COMPOSE_FILE} build --parallel
   if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default") =~ ${PROJECT}_default ]]; then
     docker network create "${PROJECT}_default"
   fi
