@@ -3,8 +3,15 @@
 # `set +e` is used to continue on errors throughout this script.
 set -euo pipefail
 
-# Used as the prefix for docker networking, container naming and nginx hostname.
-PROJECT=$(basename "${PWD}")
+# Project is used as the prefix for docker networking, container naming and nginx hostname.
+# Source the .env file here, the project var is required asap.
+if [ -f .env ]; then
+  source .env
+fi
+export PROJECT=${PROJECT:-$(basename "${PWD}")}
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-${PROJECT}}
+
+# Work out some other values we need.
 HOST_TYPE=$(uname | tr '[:upper:]' '[:lower:]')
 DOCKER_COMPOSE_FILE="docker-compose.${HOST_TYPE}.yml"
 
@@ -52,7 +59,7 @@ setup_nginx() {
       jwilder/nginx-proxy:latest
   fi
 
-  if ! docker ps --format "{{.Names}}" --filter "name=nginx-proxy" > /dev/null; then
+  if ! docker ps --format "{{.Names}}" --filter "name=^nginx-proxy$" > /dev/null; then
     error "jwilder/nginx-proxy could not be started."
   fi
 
@@ -68,7 +75,7 @@ setup_nginx() {
 
 # Add functionality to the dsh stop function
 stop_nginx() {
-  if docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default" > /dev/null; then
+  if docker network ls --format "{{.Name}}" --filter "name=^${PROJECT}_default\$" > /dev/null; then
     notice "Disconnecting nginx proxy from network."
     set +e
     docker network disconnect "${PROJECT}_default" nginx-proxy > /dev/null
@@ -79,20 +86,23 @@ stop_nginx() {
 # Command: ./dsh start
 # Configures environment then brings up project using docker-compose.yml file.
 dsh_start() {
-  notice "Starting project containers."
-  # Too slow to leave in # docker-compose -f ${DOCKER_COMPOSE_FILE} build --parallel
-  if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=${PROJECT}_default") =~ ${PROJECT}_default ]]; then
-    docker network create "${PROJECT}_default"
-  fi
-  setup_nginx
+  if [[ ! $(docker ps --format "{{.Names}}" --filter "name=^${PROJECT}_web") =~ "${PROJECT}_web" ]]; then
+    notice "Starting containers."
+    # Too slow to leave in # docker-compose -f ${DOCKER_COMPOSE_FILE} build --parallel
+    if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=^${PROJECT}_default\$") =~ "${PROJECT}_default" ]]; then
+      notice "Creating network."
+      docker network create "${PROJECT}_default"
+    fi
+    setup_nginx
 
-  docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
-  URL="http://${PROJECT}.${DOMAIN}"
-  notice "Please wait about 10 seconds for the database to settle.
-You can now access the site from ${URL}.
-Project files are available in /code, You may need to build and install your
-  project before it starts working.
-Connecting via ./dsh shell and running robo build is a common next step."
+    docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
+    URL="http://${PROJECT}.${DOMAIN}:8080"
+    notice "Please wait about 10 seconds for the database to settle.
+
+The project is now available at: ${URL}.
+
+Files are available in /code, You may need to 'robo build' to install."
+  fi
 }
 
 # Command: ./dsh shell
@@ -110,12 +120,15 @@ dsh_shell() {
 # Stops project and brings down network after disconnecting nginx proxy.
 dsh_stop() {
   notice "Stopping containers."
+  stop_nginx
   docker-compose -f ${DOCKER_COMPOSE_FILE} stop
 }
 
 # Command: ./dsh down
 # Stops project, then takes down containers and removes volumes if possible.
 dsh_down() {
+  stop_nginx
+  notice "Removing containers."
   docker-compose -f ${DOCKER_COMPOSE_FILE} down -v
 }
 
@@ -302,8 +315,7 @@ case ${COMMAND} in
     dsh_stop
     ;;
   *)
-    warning "Unknown command specified, defaulting to shell. For other options try:"
-    warning "$0 [down|exec|help|logs|nfs|pull|purge|rnfs|shell|start|status|stop]."
+    warning "Starting shell. For other options try $0 help."
     dsh_shell
     ;;
 esac
