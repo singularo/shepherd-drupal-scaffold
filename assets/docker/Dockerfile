@@ -4,7 +4,7 @@ FROM singularo/s2i-shepherd-drupal
 
 ARG USER_ID
 ARG GROUP_ID
-ARG PHP_VERSION="7.4"
+ARG PHP_VERSION="8.0"
 
 # Need to switch from www-data to root to do the change of uid
 USER 0:0
@@ -32,7 +32,9 @@ fi
 
 # Upgrade all currently installed packages and install additional packages.
 RUN apt-get update \
-&& apt-get -y install php-sqlite3 php-xdebug php-cli git wget sudo unzip libnotify-bin vim \
+&& apt-get -y install php-sqlite3 php-xdebug php-cli git wget curl sudo unzip libnotify-bin vim nodejs \
+&& curl -sL https://deb.nodesource.com/setup_14.x | bash - \
+&& apt-get -y install nodejs \
 && sed -ri 's/^zend.assertions\s*=\s*-1/zend.assertions = 1/g' /etc/php/${PHP_VERSION}/cli/php.ini \
 && apt-get -y autoremove && apt-get -y autoclean && apt-get clean && rm -rf /var/lib/apt/lists /tmp/* /var/tmp/*
 
@@ -45,9 +47,6 @@ RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
 && mv /tmp/blackfire/blackfire-*.so $(php -r "echo ini_get('extension_dir');")/blackfire.so \
 && printf "extension=blackfire.so\nblackfire.agent_socket=tcp://blackfire:8707\n" > /etc/php/${PHP_VERSION}/apache2/conf.d/blackfire.ini \
 && rm -rf /tmp/blackfire /tmp/blackfire-probe.tar.gz
-
-# Install Composer.
-RUN wget -q https://getcomposer.org/installer -O - | php -d allow_url_fopen=On -- --install-dir=/usr/local/bin --filename=composer --version=1.10.16
 
 COPY ./docker/xdebug.ini /etc/php/${PHP_VERSION}/mods-available/xdebug.ini
 COPY ./docker/custom.ini /etc/php/${PHP_VERSION}/mods-available/custom.ini
