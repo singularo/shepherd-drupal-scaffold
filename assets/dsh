@@ -8,7 +8,7 @@ set -euo pipefail
 if [ -f .env ]; then
   source .env
 fi
-export PROJECT=${PROJECT:-$(basename "${PWD}")}
+export PROJECT=${PROJECT:-$(basename "${PWD}" | tr -d '.')}
 export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-${PROJECT}}
 
 # Work out some other values we need.
