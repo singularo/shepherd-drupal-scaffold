@@ -153,11 +153,18 @@ abstract class RoboFileBase extends Tasks {
     $this->buildComposerInstall();
     $this->buildSetFilesOwner();
     $this->buildInstall();
+
+    // If the SITE_UUID is set, set the newly built site to have the same id.
     if ($uuid = $this->getSiteUuid()) {
       $this->_exec("drush config-set system.site uuid $uuid -y");
       $this->devCacheRebuild();
-      $this->_exec("drush cim -y --partial");
+
+      // Unless IMPORT_CONFIG=false is set, import the config-sync dir
+      if (getenv('IMPORT_CONFIG') !== 'false') {
+        $this->_exec("drush cim -y --partial");
+      }
     }
+
     $this->devCacheRebuild();
     $this->buildSetFilesOwner();
     $this->devXdebugEnable();
