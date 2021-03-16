@@ -41,6 +41,7 @@ services:
       SHEPHERD_INSTALL_PROFILE:
       DRUSH_OPTIONS_URI:
       SITE_UUID:
+      IMPORT_CONFIG:
 
     volumes:
       - .:/code
