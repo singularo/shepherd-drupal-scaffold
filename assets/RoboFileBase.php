@@ -10,7 +10,6 @@
 declare(strict_types=1);
 
 use Robo\Tasks;
-use Robo\ResultData;
 
 /**
  * Implement specific functions to enable Drupal install builds.
@@ -67,25 +66,27 @@ abstract class RoboFileBase extends Tasks {
    * Initialize config variables and apply overrides.
    */
   public function __construct() {
+    // Default to stopping on failures.
+    $this->stopOnFail(TRUE);
+
     // Read config from environment variables.
     $environmentConfig = $this->readConfigFromEnv();
     $this->config = array_merge($this->config, $environmentConfig);
 
     // Get the drupal profile.
-    $this->getDrupalProfile();
+    $this->setDrupalProfile();
   }
 
   /**
-   * Force projects to declare which install profile to use.
+   * Load the install profile.
    */
-  protected function getDrupalProfile(): ?ResultData {
+  protected function setDrupalProfile(): void {
     $profile = getenv('SHEPHERD_INSTALL_PROFILE');
     if (empty($profile)) {
-      return new ResultData(1, "Install profile environment variable is not set.");
+      throw new \RuntimeException('SHEPHERD_INSTALL_PROFILE environment variable not defined.');
     }
 
     $this->drupalProfile = $profile;
-    return new ResultData(TRUE);
   }
 
   /**
@@ -127,18 +128,18 @@ abstract class RoboFileBase extends Tasks {
     $this->sharedPrefix = getenv("SHARED_PREFIX") ?: '';
 
     // Clean up NULL values and empty arrays.
-    $array_clean = static function (&$item) use (&$array_clean) {
+    $arrayClean = static function (&$item) use (&$arrayClean) {
       foreach ($item as $key => $value) {
         if (is_array($value)) {
-          $array_clean($item[$key]);
+          $arrayClean($value);
         }
-        if (empty($item[$key]) && $value !== '0') {
+        if (empty($value) && $value !== '0') {
           unset($item[$key]);
         }
       }
     };
 
-    $array_clean($config);
+    $arrayClean($config);
 
     return $config;
   }
@@ -146,145 +147,59 @@ abstract class RoboFileBase extends Tasks {
   /**
    * Perform a full build on the project.
    */
-  public function build(): void {
-    $start = new DateTime();
+  public function build() {
     $this->devXdebugDisable();
-    $this->devComposerValidate();
-    $this->buildComposerInstall();
-    $this->buildSetFilesOwner();
+    $this->taskComposerValidate()->noCheckPublish();
+
     $this->buildInstall();
 
     // If the SITE_UUID is set, set the newly built site to have the same id.
     if ($uuid = $this->getSiteUuid()) {
-      $this->_exec("drush config-set system.site uuid $uuid -y");
+      $this->drush('config:set')
+        ->args('system.site', 'uuid', $uuid)
+        ->option('yes')
+        ->run();
       $this->devCacheRebuild();
 
-      // Unless IMPORT_CONFIG=false is set, import the config-sync dir
+      // Unless IMPORT_CONFIG=false is set, import the config-sync dir.
       if (getenv('IMPORT_CONFIG') !== 'false') {
-        $this->_exec("drush cim -y --partial");
+        $this->drush('config:import')
+          ->arg('--partial')
+          ->option('yes')
+          ->run();
       }
     }
 
-    $this->devCacheRebuild();
-    $this->buildSetFilesOwner();
     $this->devXdebugEnable();
-    $this->say('Total build duration: ' . date_diff(new DateTime(), $start)->format('%im %Ss'));
-  }
-
-  /**
-   * Perform a build for automated deployments.
-   *
-   * Don't install anything, just build the code base.
-   */
-  public function distributionBuild(): void {
-    $this->devComposerValidate();
-    $this->buildComposerInstall('--prefer-dist --no-suggest --no-dev --optimize-autoloader');
-    $this->setSitePath();
-  }
-
-  /**
-   * Validate composer files and installed dependencies with strict mode off.
-   */
-  public function devComposerValidate(): void {
-    $this->taskComposerValidate()
-      ->noCheckPublish()
-      ->run()
-      ->stopOnFail();
-  }
-
-  /**
-   * Run composer install to fetch the application code from dependencies.
-   *
-   * @param string $flags
-   *   Additional flags to pass to the composer install command.
-   *
-   * @return \Robo\ResultData|null
-   *   Return whether the install succeeded.
-   */
-  public function buildComposerInstall($flags = ''): ?ResultData {
-    $stack = $this->taskExec('composer')
-      ->arg('install')
-      ->option('no-progress')
-      ->option('no-interaction');
-
-    if (!empty($flags)) {
-      $stack->arg($flags);
-    }
-
-    $result = $stack->run();
-    if (!$result->wasSuccessful()) {
-      return new ResultData(1, 'Composer install failed.');
-    }
-
-    return new ResultData(TRUE);
-  }
-
-  /**
-   * Set the owner and group of all files in the files dir to the web user.
-   */
-  public function buildSetFilesOwner(): ?ResultData {
-    $this->say('Setting ownership and permissions.');
-    foreach ($this->filePaths as $path) {
-      $path = $this->sharedPrefix . $path;
-      $stack = $this->taskFilesystemStack()
-        ->stopOnFail()
-        ->mkdir($path)
-        ->chmod($path, 0755, 0000);
-
-      $result = $stack->run();
-      if (!$result->wasSuccessful()) {
-        return new ResultData(1, 'File ownership failed.');
-      }
-    }
-
-    return new ResultData(TRUE);
   }
 
   /**
    * Clean config and files, then install Drupal and module dependencies.
    */
-  public function buildInstall(): ?ResultData {
-    // Ensure configuration is writable.
-    $this->devConfigWriteable();
-
-    $stack = $this->taskExec('drush')
-      ->arg('site-install')
+  public function buildInstall(): void {
+    $this->drush('site:install')
       ->arg($this->drupalProfile)
-      ->arg('-y')
-      ->arg('install_configure_form.enable_update_status_module=NULL')
-      ->arg('install_configure_form.enable_update_status_emails=NULL')
+      ->rawArg('install_configure_form.enable_update_status_module=NULL')
+      ->rawArg('install_configure_form.enable_update_status_emails=NULL')
       ->option('account-mail', $this->config['site']['admin_email'])
       ->option('account-name', $this->config['site']['admin_user'])
       ->option('account-pass', $this->config['site']['admin_password'])
       ->option('site-name', $this->config['site']['title'])
-      ->option('site-mail', $this->config['site']['mail']);
-
-    $result = $stack->run();
-    $this->devConfigReadOnly();
-    if (!$result->wasSuccessful()) {
-      return new ResultData(1, 'drush site-install failed.');
-    }
-
-    $this->devCacheRebuild();
-
-    return new ResultData(TRUE);
+      ->option('site-mail', $this->config['site']['mail'])
+      ->option('yes')
+      ->run();
   }
 
   /**
    * Set the RewriteBase value in .htaccess appropriate for the site.
    */
-  public function setSitePath(): ?ResultData {
+  public function setSitePath(): void {
     if (!empty($this->config['site']['path'])) {
       $this->say("Setting site path.");
-      $successful = $this->taskReplaceInFile("$this->applicationRoot/.htaccess")
+      $this->taskReplaceInFile("$this->applicationRoot/.htaccess")
         ->from('# RewriteBase /drupal')
-        ->to("\n  RewriteBase /" . ltrim($this->config['site']['path'], '/') . "\n")
-        ->run();
-
-      return $this->checkFail($successful, "Couldn't update .htaccess file with path.");
+        ->to("\n  RewriteBase /" . ltrim($this->config['site']['path'], '/') . "\n");
     }
-
-    return new ResultData(TRUE);
   }
 
   /**
@@ -292,8 +207,7 @@ abstract class RoboFileBase extends Tasks {
    *
    * @throws \Robo\Exception\TaskException
    */
-  public function buildClean(): ?ResultData {
-    $this->setPermissions("$this->applicationRoot/sites/default", 0755);
+  public function buildClean(): void {
     $stack = $this->taskExecStack()
       ->stopOnFail()
       ->exec("rm -fR $this->applicationRoot/core")
@@ -306,60 +220,26 @@ abstract class RoboFileBase extends Tasks {
 
     $result = $stack->run();
     if (!$result->wasSuccessful()) {
-      return new ResultData(1, 'Build clean failed.');
+      throw new \RuntimeException('Build clean failed.');
     }
-
-    return new ResultData(TRUE);
   }
 
   /**
    * Run all the drupal updates against a build.
    */
-  public function buildUpdate(): ResultData {
+  public function buildUpdate(): void {
     // Run the module updates.
-    return $this->checkFail($this->_exec('drush -y updatedb')->wasSuccessful(), 'Running drupal updates failed.');
-  }
-
-  /**
-   * Perform cache clear in the app directory.
-   */
-  public function devCacheRebuild(): ResultData {
-    return $this->checkFail($this->_exec('drush cr')->wasSuccessful(), 'Running cache-rebuild failed.');
-  }
-
-  /**
-   * CLI debug enable.
-   */
-  public function devXdebugEnable(): ResultData {
-    // Only run this on environments configured with xdebug.
-    if (getenv('XDEBUG_CONFIG')) {
-      return $this->checkFail($this->_exec('sudo phpenmod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug enable failed.');
-    }
-
-    return new ResultData(TRUE);
-  }
-
-  /**
-   * CLI debug disable.
-   */
-  public function devXdebugDisable(): ResultData {
-    // Only run this on environments configured with xdebug.
-    if (getenv('XDEBUG_CONFIG')) {
-      return $this->checkFail($this->_exec('sudo phpdismod -v ALL -s cli xdebug')->wasSuccessful(), 'Running xdebug disable failed.');
-    }
-    return new ResultData(TRUE);
+    $this->drush('updatedb')
+      ->option('yes')
+      ->run();
   }
 
   /**
    * Turns on twig debug mode, auto reload on and caching off.
-   *
-   * @throws \Robo\Exception\TaskException
    */
   public function devTwigDebugEnable(): void {
-    $this->devConfigWriteable();
     $this->devAggregateAssetsDisable(FALSE);
     $this->devUpdateServices(TRUE);
-    $this->devConfigReadOnly();
     $this->devCacheRebuild();
   }
 
@@ -367,10 +247,41 @@ abstract class RoboFileBase extends Tasks {
    * Turn off twig debug mode, autoreload off and caching on.
    */
   public function devTwigDebugDisable(): void {
-    $this->devConfigWriteable();
     $this->devUpdateServices(FALSE);
-    $this->devConfigReadOnly();
     $this->devCacheRebuild();
+  }
+
+  /**
+   * Perform cache clear in the app directory.
+   */
+  public function devCacheRebuild(): void {
+    $this->drush('cache:rebuild')->run();
+  }
+
+  /**
+   * CLI debug enable.
+   */
+  public function devXdebugEnable(): void {
+    // Only run this on environments configured with xdebug.
+    if (getenv('XDEBUG_CONFIG')) {
+      $this->say('Enabling xdebug.');
+      if (!$this->_exec('sudo phpenmod -v ALL -s cli xdebug')->wasSuccessful()) {
+        throw new \RuntimeException('Unable to enable xdebug.');
+      }
+    }
+  }
+
+  /**
+   * CLI debug disable.
+   */
+  public function devXdebugDisable(): void {
+    // Only run this on environments configured with xdebug.
+    if (getenv('XDEBUG_CONFIG')) {
+      $this->say('Disabling xdebug.');
+      if (!$this->_exec('sudo phpdismod -v ALL -s cli xdebug')->wasSuccessful()) {
+        throw new \RuntimeException('Unable to enable xdebug.');
+      }
+    }
   }
 
   /**
@@ -379,7 +290,7 @@ abstract class RoboFileBase extends Tasks {
    * @param bool $enable
    *   Whether to disable or enable debug parameters.
    */
-  private function devUpdateServices($enable = TRUE): void {
+  private function devUpdateServices(bool $enable = TRUE): void {
     $replacements = [
       ['debug: false', 'debug: true'],
       ['auto_reload: null', 'auto_reload: true'],
@@ -396,10 +307,13 @@ abstract class RoboFileBase extends Tasks {
     }
 
     foreach ($replacements as $values) {
-      $this->taskReplaceInFile($this->servicesYml)
+      if (!$this->taskReplaceInFile($this->servicesYml)
         ->from($values[$old])
         ->to($values[$new])
-        ->run();
+        ->run()
+        ->wasSuccessful()) {
+        throw new \RuntimeException('Unable to update services.yml');
+      }
     }
   }
 
@@ -408,27 +322,27 @@ abstract class RoboFileBase extends Tasks {
    *
    * @param bool $cacheClear
    *   Whether to clear the cache after changes.
-   *
-   * @return \Robo\ResultData
-   *   The result of the command.
-   *
-   * @throws \Robo\Exception\TaskException
    */
-  public function devAggregateAssetsDisable($cacheClear = TRUE): ResultData {
-    $stack = $this->taskExecStack()
-      ->stopOnFail()
-      ->exec('drush cset system.performance js.preprocess 0 -y')
-      ->exec('drush cset system.performance css.preprocess 0 -y');
-
-    $result = $stack->run();
+  public function devAggregateAssetsDisable(bool $cacheClear = TRUE): void {
+    $result = $this->drush('config:set')
+      ->rawArg('system.performance js.preprocess 0')
+      ->option('yes')
+      ->run();
     if (!$result->wasSuccessful()) {
-      return new ResultData(1, 'Aggregate disable failed.');
+      throw new \RuntimeException('Aggregate disable failed.');
+    }
+
+    $result = $this->drush('config:set')
+      ->rawArg('system.performance css.preprocess 0 -y')
+      ->option('yes')
+      ->run();
+    if (!$result->wasSuccessful()) {
+      throw new \RuntimeException('Aggregate disable failed.');
     }
 
     if ($cacheClear) {
       $this->devCacheRebuild();
     }
-    return new ResultData(TRUE);
   }
 
   /**
@@ -436,101 +350,73 @@ abstract class RoboFileBase extends Tasks {
    *
    * @param bool $cacheClear
    *   Whether to clear the cache after changes.
-   *
-   * @return \Robo\ResultData
-   *   The result of the command.
-   *
-   * @throws \Robo\Exception\TaskException
    */
-  public function devAggregateAssetsEnable($cacheClear = TRUE): ResultData {
-    $stack = $this->taskExecStack()
-      ->stopOnFail()
-      ->exec('drush cset system.performance js.preprocess 1 -y')
-      ->exec('drush cset system.performance css.preprocess 1 -y');
-
-    $result = $stack->run();
+  public function devAggregateAssetsEnable(bool $cacheClear = TRUE) {
+    $result = $this->drush('config:set')
+      ->args('system.performance js.preprocess 1')
+      ->option('yes')
+      ->run();
     if (!$result->wasSuccessful()) {
-      return new ResultData(1, 'Aggregate enable failed.');
+      throw new \RuntimeException('Config set failed.');
+    }
+
+    $result = $this->drush('config:set')
+      ->args('system.performance css.preprocess 1')
+      ->option('yes')
+      ->run();
+    if (!$result->wasSuccessful()) {
+      throw new \RuntimeException('Config set failed.');
     }
 
     if ($cacheClear) {
       $this->devCacheRebuild();
     }
-    return new ResultData(TRUE);
-  }
-
-  /**
-   * Make config files write-able.
-   */
-  public function devConfigWriteable(): void {
-    $this->setPermissions("$this->applicationRoot/sites/default/services.yml", 0664);
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.php", 0664);
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.local.php", 0664);
-    $this->setPermissions("$this->applicationRoot/sites/default", 0775);
-  }
-
-  /**
-   * Make config files read only.
-   */
-  public function devConfigReadOnly(): void {
-    $this->setPermissions("$this->applicationRoot/sites/default/services.yml", 0444);
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.php", 0444);
-    $this->setPermissions("$this->applicationRoot/sites/default/settings.local.php", 0444);
-    $this->setPermissions("$this->applicationRoot/sites/default", 0555);
   }
 
   /**
    * Imports a database, updates the admin user password and applies updates.
    *
-   * @param string $sql_file
+   * @param string $sqlFile
    *   Path to sql file to import.
-   *
-   * @return \Robo\ResultData
-   *   The result of the command.
-   *
-   * @throws \Robo\Exception\TaskException
    */
-  public function devImportDb(string $sql_file): ResultData {
-    $start = new DateTime();
-    $stack = $this->taskExecStack()
-      ->stopOnFail()
-      ->exec('drush -y sql-drop')
-      ->exec("drush sqlq --file=$sql_file")
-      ->exec('drush cr');
-    $result = $stack->run();
-    if (!$result->wasSuccessful()) {
-      return new ResultData(1, 'Database import failed.');
-    }
+  public function devImportDb(string $sqlFile): array {
+    $this->drush('sql:drop')
+      ->option('yes')
+      ->run();
 
+    $this->drush('sql:query')
+      ->option('file', $sqlFile)
+      ->run();
+
+    $this->devCacheRebuild();
     $this->devResetAdminPass();
-
-    $this->say('Duration: ' . date_diff(new DateTime(), $start)->format('%im %Ss'));
-
-    return new ResultData(TRUE);
   }
 
   /**
-   * Find the userame of user 1 which is the 'admin' user for Drupal.
+   * Find the username of user 1 which is the 'admin' user for Drupal.
    *
-   * @return \Robo\ResultData
-   *   The result of the command.
+   * @param string $password
+   *   Password for admin user, defaults to 'password'.
    */
-  public function devResetAdminPass(): ResultData {
-    // Retrieve the name of the user.
-    $command = $this->taskExec('drush sqlq "SELECT name from users u LEFT JOIN users_field_data ud ON u.uid = ud.uid WHERE u.uid = 1"')
+  public function devResetAdminPass(string $password = 'password'): void {
+    // Retrieve the name of the admin user, it might not be 'admin'.
+    $result = $this->drush('sql:query')
+      ->arg('SELECT name FROM users u LEFT JOIN users_field_data ud ON u.uid = ud.uid WHERE u.uid = 1')
       ->printOutput(FALSE)
       ->run();
-    $adminUser = trim($command->getMessage());
-
-    // Perform the password reset.
-    $command = $this->taskExec("drush upwd $adminUser password");
-    $result = $command->run();
     if (!$result->wasSuccessful()) {
-      return new ResultData(1, 'Admin password reset failed.');
+      throw new \RuntimeException('No user with uid 1, this is probably bad.');
     }
 
-    $this->say("Database imported, admin user is: $adminUser password is: password");
-    return new ResultData(TRUE);
+    $adminUser = trim($result->getMessage());
+
+    // Perform the password reset.
+    $result = $this->drush('user:password')
+      ->args($adminUser, $password)
+      ->run();
+    if (!$result->wasSuccessful()) {
+      throw new \RuntimeException('Failed resetting password.');
+    }
   }
 
   /**
@@ -539,11 +425,11 @@ abstract class RoboFileBase extends Tasks {
    * @param string $name
    *   Name of sql file to be exported.
    */
-  public function devExportDb($name = 'dump'): void {
-    $start = new DateTime();
-    $this->_exec("drush sql-dump --gzip --result-file=$name.sql");
-    $this->say("Duration: " . date_diff(new DateTime(), $start)->format('%im %Ss'));
-    $this->say("Database $name.sql.gz exported");
+  public function devExportDb(string $name = 'dump'): void {
+    $this->drush('sql:dump')
+      ->option('gzip')
+      ->option('result-file', "$name.sql")
+      ->run();
   }
 
   /**
@@ -552,9 +438,9 @@ abstract class RoboFileBase extends Tasks {
    * @param string $path
    *   An optional path to lint.
    */
-  public function lintPhp($path = ''): void {
-    $this->checkFail($this->_exec("phpcs $path")->wasSuccessful(), 'Code linting failed.');
-    $this->checkFail($this->_exec("phpstan analyze --no-progress")->wasSuccessful(), 'Code analyzing failed.');
+  public function devLintPhp(string $path = ''): void {
+    $this->_exec('phpcs ' . $path);
+    $this->_exec('phpstan analyze --no-progress');
   }
 
   /**
@@ -563,46 +449,24 @@ abstract class RoboFileBase extends Tasks {
    * @param string $path
    *   An optional path to fix.
    */
-  public function lintFix($path = ''): void {
-    $this->checkFail($this->_exec("phpcbf $path")->wasSuccessful(), 'Code fixing failed.');
+  public function devLintFix(string $path = ''): void {
+    $this->_exec('phpcbf ' . $path);
   }
 
   /**
-   * Check if file exists and set permissions.
+   * Provide drush wrapper.
    *
-   * @param string $file
-   *   File to modify.
-   * @param int $permission
-   *   Permissions. E.g. '0644'.
+   * @param string $command
+   *   The command to run.
+   *
+   * @return \Robo\Collection\CollectionBuilder|\Robo\Task\Base\Exec
+   *   The task to exec.
    */
-  protected function setPermissions(string $file, int $permission): void {
-    if (file_exists($file)) {
-      $this->taskFilesystemStack()
-        ->stopOnFail()
-        ->chmod($file, (int) $permission, 0000)
-        ->run();
-    }
-  }
+  protected function drush(string $command) {
+    $task = $this->taskExec('drush');
+    $task->rawArg($command);
 
-  /**
-   * Helper function to check whether a task has completed successfully.
-   *
-   * @param bool $successful
-   *   Task ran successfully or not.
-   * @param string $message
-   *   Optional: A helpful message to print.
-   *
-   * @return \Robo\ResultData
-   *   The result of the command.
-   */
-  protected function checkFail(bool $successful, $message = ''): ResultData {
-    if (!$successful) {
-      $this->say('APP_ERROR: ' . $message);
-      // Prevent any other tasks from executing.
-      return new ResultData(1, $message);
-    }
-
-    return new ResultData(TRUE);
+    return $task;
   }
 
 }

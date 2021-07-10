@@ -13,6 +13,9 @@ use Composer\Script\ScriptEvents;
 
 /**
  * Composer plugin for handling Shepherd Drupal scaffold.
+ *
+ * @package Singularo\ShepherdDrupalScaffold
+ * @SuppressWarnings(PHPMD.ShortVariable)
  */
 class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
 
@@ -55,14 +58,10 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    */
   public static function getSubscribedEvents() {
     return [
-      // Run the pre installs before anything else.
-      ScriptEvents::PRE_UPDATE_CMD => ['preInstall', 99],
-      ScriptEvents::PRE_INSTALL_CMD => ['preInstall', 99],
-
       // Run the post installs after everything else.
       ScriptEvents::POST_CREATE_PROJECT_CMD => ['postInstall', -99],
       ScriptEvents::POST_INSTALL_CMD => ['postInstall', -99],
-      ScriptEvents::POST_UPDATE_CMD => ['postInstall', -99]
+      ScriptEvents::POST_UPDATE_CMD => ['postInstall', -99],
     ];
   }
 
@@ -75,23 +74,9 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    */
   public function postInstall(Event $event): void {
     $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
-    $shepherd->makeReadWrite();
     $event->getIO()->write('Creating settings.php file if not present.');
     $shepherd->populateSettingsFile();
-    $event->getIO()->write('Removing write permissions on settings files.');
     $shepherd->ensureShared();
-    $shepherd->makeReadOnly();
-  }
-
-  /**
-   * Pre install command event to ensure permissions are usable.
-   *
-   * @param \Composer\Script\Event $event
-   */
-  public function preInstall(Event $event): void {
-    $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
-    $event->getIO()->write('Restoring write permissions on settings files.');
-    $shepherd->makeReadWrite();
   }
 
 }
