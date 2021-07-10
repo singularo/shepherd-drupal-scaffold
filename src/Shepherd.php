@@ -6,44 +6,63 @@ namespace Singularo\ShepherdDrupalScaffold;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
-use Composer\Package\PackageInterface;
 use Composer\Util\Filesystem as ComposerFilesystem;
 use Symfony\Component\Filesystem\Filesystem;
 
+/**
+ * Provide composer install functions for the shepherd hosting system.
+ *
+ * @package Singularo\ShepherdDrupalScaffold
+ * @SuppressWarnings(PHPMD.ShortVariable)
+ */
 class Shepherd {
 
   /**
+   * Composer object.
+   *
    * @var \Composer\Composer
    */
   protected Composer $composer;
 
   /**
-   * @var string $eventName
+   * Triggered event.
+   *
+   * @var string
    */
   protected string $eventName;
 
   /**
+   * IO interface.
+   *
    * @var \Composer\IO\IOInterface
    */
   protected IOInterface $io;
 
   /**
+   * Filesystem.
+   *
    * @var \Symfony\Component\Filesystem\Filesystem
    */
   protected Filesystem $filesystem;
 
   /**
+   * Project path.
+   *
    * @var string
    */
   protected string $projectPath;
 
   /**
-   * @var string $root
+   * Root directory.
+   *
+   * @var string
    */
   protected string $root;
 
   /**
-   * @var string $settings
+   * Settings file.
+   *
+   * @var string
    */
   protected string $settings;
 
@@ -54,13 +73,13 @@ class Shepherd {
    *   Composer package object.
    * @param \Composer\IO\IOInterface $io
    *   IO Interface object.
-   * @param string $event_name
+   * @param string $eventName
    *   The event name.
    */
-  public function __construct(Composer $composer, IOInterface $io, string $event_name) {
+  public function __construct(Composer $composer, IOInterface $io, string $eventName) {
     $this->composer = $composer;
     $this->io = $io;
-    $this->eventName = $event_name;
+    $this->eventName = $eventName;
     $this->filesystem = new Filesystem();
 
     $this->projectPath = $this->getProjectPath();
@@ -97,40 +116,17 @@ class Shepherd {
    *
    * @return string
    *   PHP code.
+   *
    * @throws \Exception
    */
   public function generateSettings(): string {
     // Generate a hash salt with some characters removed.
-    $hash_salt = str_replace(['+', '/', '='], ['-', '_', ''],
+    $hashSalt = str_replace(['+', '/', '='], ['-', '_', ''],
       base64_encode(random_bytes(55)));
 
     // Return the settings template with the hash salt embedded.
-    return str_replace('{{ HASH_SALT }}', $hash_salt,
+    return str_replace('{{ HASH_SALT }}', $hashSalt,
       file_get_contents($this->getPackagePath() . '/../assets/settings.template'));
-  }
-
-  /**
-   * Remove all write permissions on Drupal configuration files and folders.
-   */
-  public function makeReadOnly(): void {
-    $this->checkExistsSetPerm([
-      $this->root . '/sites/default' => 0555,
-      $this->root . '/sites/default/default.services.yml' => 0664,
-      $this->settings => 0444,
-      $this->projectPath . '/dsh' => 0755,
-      $this->projectPath . '/dsh_bash' => 0755,
-    ]);
-  }
-
-  /**
-   * Restore write permissions on Drupal configuration files and folders.
-   */
-  public function makeReadWrite(): void {
-    $this->checkExistsSetPerm([
-      $this->root . '/sites/default' => 0755,
-      $this->root . '/sites/default/default.services.yml' => 0664,
-      $this->settings => 0664,
-    ]);
   }
 
   /**
@@ -147,27 +143,10 @@ class Shepherd {
   }
 
   /**
-   * Check file exists before trying to set permission.
-   *
-   * @param array $files
-   *   Array of file paths and octal permissions to set on the files.
-   */
-  private function checkExistsSetPerm(array $files): void {
-    foreach ($files as $file => $permission) {
-      if ($this->filesystem->exists($file)) {
-        $this->filesystem->chmod($file, $permission);
-      }
-      else {
-        $this->io->writeError($file . ': file does not exist');
-      }
-    }
-  }
-
-  /**
    * Return the path for this package.
    *
    * @return string
-   *   The file path.
+   *   Return the file path.
    */
   protected function getPackagePath(): string {
     return __DIR__;
@@ -176,9 +155,10 @@ class Shepherd {
   /**
    * Get the path to the vendor directory.
    *
-   * E.g. /home/user/code/project/vendor
+   * E.g. /home/user/code/project/vendor.
    *
    * @return string
+   *   Return the vendor path.
    */
   public function getVendorPath(): string {
     // Load ComposerFilesystem to get access to path normalisation.
@@ -192,9 +172,10 @@ class Shepherd {
   /**
    * Get the path to the project directory.
    *
-   * E.g. /home/user/code/project
+   * E.g. /home/user/code/project.
    *
    * @return string
+   *   Return the project path.
    */
   public function getProjectPath(): string {
     return dirname($this->getVendorPath());
