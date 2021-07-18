@@ -142,6 +142,29 @@ class Shepherd {
     ], 0755);
   }
 
+  public function makeExecutable(): void {
+    $this->checkExistsSetPerm([
+      $this->projectPath . '/dsh' => 0755,
+      $this->projectPath . '/dsh_bash' => 0755
+    ]);
+  }
+
+  /**
+   * Check file exists before trying to set permission.
+   *
+   * @param array $files
+   *   Array of file paths and octal permissions to set on the files.
+   */
+  private function checkExistsSetPerm(array $files): void {
+    foreach ($files as $file => $permission) {
+      if ($this->filesystem->exists($file)) {
+        $this->filesystem->chmod($file, $permission);
+      }
+      else {
+        $this->io->writeError($file . ': file does not exist');
+      }
+    }
+  }
   /**
    * Return the path for this package.
    *

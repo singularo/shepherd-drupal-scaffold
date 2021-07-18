@@ -76,7 +76,10 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
     $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
     $event->getIO()->write('Creating settings.php file if not present.');
     $shepherd->populateSettingsFile();
+    $event->getIO()->write('Ensuring shared filesystem folder exists.');
     $shepherd->ensureShared();
+    $event->getIO()->write('Ensuring dsh utility scripts are executable.');
+    $shepherd->makeExecutable();
   }
 
 }
