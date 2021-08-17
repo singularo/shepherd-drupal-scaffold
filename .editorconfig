@@ -14,4 +14,7 @@ trim_trailing_whitespace = true
 insert_final_newline = true
 
 [composer.{json,lock}]
-indent_size = 2
+indent_size = 4
+
+[composer.patches.json]
+indent_size = 4

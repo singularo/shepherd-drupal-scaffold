@@ -379,7 +379,7 @@ abstract class RoboFileBase extends Tasks {
    * @param string $sqlFile
    *   Path to sql file to import.
    */
-  public function devImportDb(string $sqlFile): array {
+  public function devImportDb(string $sqlFile) {
     $this->drush('sql:drop')
       ->option('yes')
       ->run();
