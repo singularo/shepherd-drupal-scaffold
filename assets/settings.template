@@ -85,3 +85,14 @@ if (getenv('TRUSTED_HOST_PATTERNS')) {
 /**
  * END SHEPHERD CONFIG
  */
+
+/**
+ * ALLOW PER ENVIRONMENT CONFIG
+ */
+$environment = getenv('SHEPHERD_ENVIRONMENT');
+if (!empty($environment) && file_exists(__DIR__ . '/settings.' . $environment . '.php')) {
+  include __DIR__ . '/settings.' . $environment . '.php';
+}
+/**
+ * END PER ENVIRONMENT CONFIG
+ */
