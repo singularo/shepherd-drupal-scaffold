@@ -148,7 +148,6 @@ abstract class RoboFileBase extends Tasks {
    * Perform a full build on the project.
    */
   public function build() {
-    $this->devXdebugDisable();
     $this->taskComposerValidate()->noCheckPublish();
 
     $this->buildInstall();
@@ -169,8 +168,6 @@ abstract class RoboFileBase extends Tasks {
           ->run();
       }
     }
-
-    $this->devXdebugEnable();
   }
 
   /**
