@@ -24,7 +24,14 @@ else {
 $settings['file_private_path'] = getenv('PRIVATE_DIR') ?: '/shared/private';
 $settings['file_temp_path'] = getenv('TMP_DIR') ?: '/shared/tmp';
 $settings['hash_salt'] = getenv('HASH_SALT') ?: '{{ HASH_SALT }}';
-$settings['config_sync_directory'] = DRUPAL_ROOT . '/../config-sync';
+// Support using the shared filesystem for config for immutable containers.
+if (is_dir(DRUPAL_ROOT . '/../shared/config-sync')) {
+  $settings['config_sync_directory'] = DRUPAL_ROOT . '/../shared/config-sync';
+}
+// Also support storing config in git - snowflake sites with their own repo.
+else {
+  $settings['config_sync_directory'] = DRUPAL_ROOT . '/../config-sync';
+}
 $settings['shepherd_site_id'] = getenv('SHEPHERD_SITE_ID');
 $settings['shepherd_url'] = getenv('SHEPHERD_URL');
 $settings['shepherd_token'] = getenv('SHEPHERD_TOKEN_FILE') ? file_get_contents(getenv('SHEPHERD_TOKEN_FILE')) : getenv('SHEPHERD_TOKEN');
@@ -61,15 +68,15 @@ if (getenv('MEMCACHE_ENABLED')) {
 }
 if (getenv('SHEPHERD_SECRET_PATH')) {
   $settings['shepherd_secrets'] = [];
-  // Glob the secret path for secrets, that match pattern
-  foreach ( glob( rtrim(getenv('SHEPHERD_SECRET_PATH'),DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'SHEPHERD_*', 0) as $secret) {
-    $settings['shepherd_secrets'][pathinfo($secret)['filename']] = file_get_contents($secret);
+  // Glob the secret path for shepherd secrets.
+  foreach (glob(rtrim(getenv('SHEPHERD_SECRET_PATH'), '/') . '/SHEPHERD_*', 0) as $secret) {
+    $settings['shepherd_secrets'][pathinfo($secret, PATHINFO_FILENAME)] = file_get_contents($secret);
   }
 }
 if (getenv('SHEPHERD_REVERSE_PROXY')) {
   $settings['reverse_proxy'] = TRUE;
   $settings['reverse_proxy_header'] = getenv('SHEPHERD_REVERSE_PROXY_HEADER') ?: 'X_CLUSTER_CLIENT_IP';
-  $settings['reverse_proxy_addresses'] = !empty(getenv('SHEPHERD_REVERSE_PROXY_ADDRESSES')) ? explode(',', getenv('SHEPHERD_REVERSE_PROXY_ADDRESSES')) : [];
+  $settings['reverse_proxy_addresses'] = explode(',', getenv('SHEPHERD_REVERSE_PROXY_ADDRESSES')) ?: [];
   $settings['reverse_proxy_proto_header'] = getenv('SHEPHERD_REVERSE_PROXY_PROTO_HEADER') ?: 'X_FORWARDED_PROTO';
   $settings['reverse_proxy_host_header'] = getenv('SHEPHERD_REVERSE_PROXY_HOST_HEADER') ?: 'X_FORWARDED_HOST';
   $settings['reverse_proxy_port_header'] = getenv('SHEPHERD_REVERSE_PROXY_PORT_HEADER') ?: 'X_FORWARDED_PORT';
@@ -80,7 +87,7 @@ if (getenv('SHEPHERD_REVERSE_PROXY')) {
   }
 }
 if (getenv('TRUSTED_HOST_PATTERNS')) {
-  $settings['trusted_host_patterns'] = !empty(getenv('TRUSTED_HOST_PATTERNS')) ? explode(',', getenv('TRUSTED_HOST_PATTERNS')) : [];
+  $settings['trusted_host_patterns'] = explode(',', getenv('TRUSTED_HOST_PATTERNS')) ?: [];
 }
 /**
  * END SHEPHERD CONFIG
@@ -89,9 +96,11 @@ if (getenv('TRUSTED_HOST_PATTERNS')) {
 /**
  * ALLOW PER ENVIRONMENT CONFIG
  */
-$environment = getenv('SHEPHERD_ENVIRONMENT');
-if (!empty($environment) && file_exists(__DIR__ . '/settings.' . $environment . '.php')) {
-  include __DIR__ . '/settings.' . $environment . '.php';
+if ($environment = getenv('SHEPHERD_ENVIRONMENT')) {
+  $environment_settings = $app_root . '/' . $site_path . '/settings.' . $environment . '.php';
+  if (file_exists($environment_settings)) {
+    include($environment_settings);
+  }
 }
 /**
  * END PER ENVIRONMENT CONFIG
