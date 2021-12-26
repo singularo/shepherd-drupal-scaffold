@@ -32,8 +32,8 @@ if [ -f docker-compose.yml ]; then
 fi
 
 # Set user variables
-USER_ID=$(id -u "${USER}")
-GROUP_ID=$(id -g "${USER}")
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
 
 # Setup some functions to output warnings.
 notice()  { printf "\e[32;01m%s\e[39;49;00m\n" "$1"; }
