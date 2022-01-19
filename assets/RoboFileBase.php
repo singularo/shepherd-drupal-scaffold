@@ -31,29 +31,11 @@ abstract class RoboFileBase extends Tasks {
   protected string $applicationRoot = '/code/web';
 
   /**
-   * The path to the public files directory.
-   *
-   * @var array
-   */
-  protected array $filePaths = [
-    '/shared/public',
-    '/shared/private',
-    '/shared/tmp',
-  ];
-
-  /**
-   * Shared filesystem prefix for tmp dir/testing.
-   *
-   * @var string
-   */
-  protected string $sharedPrefix = '';
-
-  /**
    * The path to the services file.
    *
    * @var string
    */
-  protected string $servicesYml = 'web/sites/default/services.yml';
+  protected string $servicesYml = '/code/web/sites/default/services.yml';
 
   /**
    * The config we're going to export.
@@ -78,7 +60,9 @@ abstract class RoboFileBase extends Tasks {
   }
 
   /**
-   * Load the install profile.
+   * Confirm the installation profile is set.
+   *
+   * Runs during the constructor; be careful not to use Robo methods.
    */
   protected function setDrupalProfile(): void {
     $profile = getenv('SHEPHERD_INSTALL_PROFILE');
@@ -87,20 +71,6 @@ abstract class RoboFileBase extends Tasks {
     }
 
     $this->drupalProfile = $profile;
-  }
-
-  /**
-   * Retrieve the site UUID.
-   *
-   * Once config is set, its likely that the UUID will need to be consistent
-   * across builds. This function is used as part of the build to get that
-   * from an environment var, often defined in the docker-compose.*.yml file.
-   *
-   * @return string|bool
-   *   Return either a valid site uuid, or false if there is none.
-   */
-  protected function getSiteUuid() {
-    return getenv('SITE_UUID');
   }
 
   /**
@@ -124,9 +94,6 @@ abstract class RoboFileBase extends Tasks {
     // Environment.
     $config['environment']['hash_salt'] = getenv('HASH_SALT');
 
-    // Allow for shared file prefix.
-    $this->sharedPrefix = getenv("SHARED_PREFIX") ?: '';
-
     // Clean up NULL values and empty arrays.
     $arrayClean = static function (&$item) use (&$arrayClean) {
       foreach ($item as $key => $value) {
@@ -147,7 +114,7 @@ abstract class RoboFileBase extends Tasks {
   /**
    * Perform a full build on the project.
    */
-  public function build() {
+  public function build(): void {
     $this->taskComposerValidate()->noCheckPublish();
 
     $this->buildInstall();
@@ -232,6 +199,20 @@ abstract class RoboFileBase extends Tasks {
   }
 
   /**
+   * Retrieve the site UUID.
+   *
+   * Once config is set, it's likely that the UUID will need to be consistent
+   * across builds. This function is used as part of the build to get that
+   * from an environment var, often defined in the docker-compose.*.yml file.
+   *
+   * @return string|bool
+   *   Return either a valid site uuid, or false if there is none.
+   */
+  protected function getSiteUuid(): ?string {
+    return getenv('SITE_UUID');
+  }
+
+  /**
    * Turns on twig debug mode, auto reload on and caching off.
    */
   public function devTwigDebugEnable(): void {
@@ -292,6 +273,10 @@ abstract class RoboFileBase extends Tasks {
       ['debug: false', 'debug: true'],
       ['auto_reload: null', 'auto_reload: true'],
       ['cache: true', 'cache: false'],
+      [
+        'http.response.debug_cacheability_headers: true',
+        'http.response.debug_cacheability_headers: false',
+      ],
     ];
 
     if ($enable) {
@@ -348,7 +333,7 @@ abstract class RoboFileBase extends Tasks {
    * @param bool $cacheClear
    *   Whether to clear the cache after changes.
    */
-  public function devAggregateAssetsEnable(bool $cacheClear = TRUE) {
+  public function devAggregateAssetsEnable(bool $cacheClear = TRUE): void {
     $result = $this->drush('config:set')
       ->args('system.performance js.preprocess 1')
       ->option('yes')
@@ -376,7 +361,7 @@ abstract class RoboFileBase extends Tasks {
    * @param string $sqlFile
    *   Path to sql file to import.
    */
-  public function devImportDb(string $sqlFile) {
+  public function devImportDb(string $sqlFile): void {
     $this->drush('sql:drop')
       ->option('yes')
       ->run();
@@ -460,7 +445,7 @@ abstract class RoboFileBase extends Tasks {
    *   The task to exec.
    */
   protected function drush(string $command) {
-    $task = $this->taskExec('drush');
+    $task = $this->taskExec('vendor/bin/drush');
     $task->rawArg($command);
 
     return $task;
