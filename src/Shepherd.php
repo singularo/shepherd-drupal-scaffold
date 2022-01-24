@@ -95,10 +95,8 @@ class Shepherd {
    * @throws \Exception
    */
   public function populateSettingsFile(): void {
-    // Check if settings.php exists, create it if not.
-    if (!file_exists($this->settings)) {
-      $this->filesystem->copy($this->root . '/sites/default/default.settings.php', $this->settings);
-    }
+    // Always re-create the settings.php file. Custom config goes elsewhere.
+    $this->filesystem->copy($this->root . '/sites/default/default.settings.php', $this->settings);
 
     // If we haven't already written to settings.php.
     if (!(strpos(file_get_contents($this->settings), 'START SHEPHERD CONFIG') !== FALSE)) {
