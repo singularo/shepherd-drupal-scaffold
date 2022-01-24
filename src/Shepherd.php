@@ -142,10 +142,13 @@ class Shepherd {
     ], 0755);
   }
 
+  /**
+   * Ensure that the scripts are executable.
+   */
   public function makeExecutable(): void {
     $this->checkExistsSetPerm([
       $this->projectPath . '/dsh' => 0755,
-      $this->projectPath . '/dsh_bash' => 0755
+      $this->projectPath . '/dsh_bash' => 0755,
     ]);
   }
 
@@ -165,6 +168,7 @@ class Shepherd {
       }
     }
   }
+
   /**
    * Return the path for this package.
    *
