@@ -208,7 +208,7 @@ abstract class RoboFileBase extends Tasks {
    * @return string|bool
    *   Return either a valid site uuid, or false if there is none.
    */
-  protected function getSiteUuid(): ?string {
+  protected function getSiteUuid() {
     return getenv('SITE_UUID');
   }
 
