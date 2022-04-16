@@ -7,7 +7,7 @@ services:
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
-    image: singularo/s2i-shepherd-drupal-dev
+    image: singularo/s2i-shepherd-drupal-dev:8.0
     hostname: ${PROJECT}
     environment:
       DATABASE_HOST: db
@@ -35,14 +35,8 @@ services:
       # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
       # WEB_PATH: /subpath
       XDEBUG_CONFIG: "remote_host=172.17.0.1"
-
-      # Pass in the vars defined in .env, or define them here.
-      PROJECT:
-      SHEPHERD_INSTALL_PROFILE:
-      DRUSH_OPTIONS_URI:
-      SITE_UUID:
-      IMPORT_CONFIG:
-
+    env_file:
+      - .env
     volumes:
       - .:/code
       - ./shared:/shared
@@ -76,13 +70,5 @@ services:
 
   memcached:
     image: memcached:alpine
-    networks:
-      - default
-
-  blackfire:
-    image: blackfire/blackfire
-    environment:
-      BLACKFIRE_SERVER_ID:
-      BLACKFIRE_SERVER_TOKEN:
     networks:
       - default
