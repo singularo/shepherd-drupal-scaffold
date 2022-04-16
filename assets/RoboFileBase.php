@@ -143,8 +143,6 @@ abstract class RoboFileBase extends Tasks {
   public function buildInstall(): void {
     $this->drush('site:install')
       ->arg($this->drupalProfile)
-      ->rawArg('install_configure_form.enable_update_status_module=NULL')
-      ->rawArg('install_configure_form.enable_update_status_emails=NULL')
       ->option('account-mail', $this->config['site']['admin_email'])
       ->option('account-name', $this->config['site']['admin_user'])
       ->option('account-pass', $this->config['site']['admin_password'])
