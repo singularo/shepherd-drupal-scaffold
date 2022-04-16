@@ -7,7 +7,7 @@ services:
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
-    image: singularo/s2i-shepherd-drupal-dev
+    image: singularo/s2i-shepherd-drupal-dev:8.0
     hostname: ${PROJECT}
     environment:
       DATABASE_HOST: db
