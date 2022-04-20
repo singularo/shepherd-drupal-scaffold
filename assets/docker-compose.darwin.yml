@@ -35,26 +35,13 @@ services:
       # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
       # WEB_PATH: /subpath
       XDEBUG_CONFIG: "remote_host=docker.for.mac.localhost"
-
-      # Pass in the vars defined in .env, or define them here.
-      PROJECT:
-      SHEPHERD_INSTALL_PROFILE:
-      DRUSH_OPTIONS_URI:
-      SITE_UUID:
-      IMPORT_CONFIG:
-
+    env_file:
+      - .env
     volumes:
       - nfsmount:/code
       - ./shared:/shared
       - ./shared/public:/code/web/sites/default/files
       - /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
-    networks:
-      - default
-
-  xdebug:
-    image: nickschuch/d4m-tcp-forwarder
-    environment:
-      - PORT=9000
     networks:
       - default
 
@@ -86,11 +73,17 @@ services:
     networks:
       - default
 
-  blackfire:
-    image: blackfire/blackfire
+  selenium:
+    image: selenium/standalone-chrome:latest
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - default
+
+  xdebug:
+    image: nickschuch/d4m-tcp-forwarder
     environment:
-      BLACKFIRE_SERVER_ID:
-      BLACKFIRE_SERVER_TOKEN:
+      - PORT=9000
     networks:
       - default
 

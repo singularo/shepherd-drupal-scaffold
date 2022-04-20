@@ -72,3 +72,10 @@ services:
     image: memcached:alpine
     networks:
       - default
+
+  selenium:
+    image: selenium/standalone-chrome:latest
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - default
