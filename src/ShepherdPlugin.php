@@ -79,6 +79,8 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
 
     // Some things are only really required for dev.
     if (getenv('SHEPHERD_ENVIRONMENT') !== 'live') {
+      $event->getIO()->write('Ensuring config-sync folder exists.');
+      $shepherd->ensureConfigSync();
       $event->getIO()->write('Ensuring shared filesystem folder exists.');
       $shepherd->ensureShared();
       $event->getIO()->write('Ensuring dsh utility scripts are executable.');

@@ -128,7 +128,16 @@ class Shepherd {
   }
 
   /**
-   * Ensure that the shared directory exists and is writable.
+   * Ensure that the config sync directory exists and is writable.
+   */
+  public function ensureConfigSync(): void {
+    $this->filesystem->mkdir([
+      $this->projectPath . '/config-sync',
+    ], 0755);
+  }
+
+  /**
+   * Ensure that the shared/files directories exists and are writable.
    */
   public function ensureShared(): void {
     $this->filesystem->mkdir([
