@@ -38,7 +38,7 @@ services:
     env_file:
       - .env
     volumes:
-      - nfsmount:/code
+      - .:/code
       - ./shared:/shared
       - ./shared/public:/code/web/sites/default/files
       - /run/host-services/ssh-auth.sock:/run/host-services/ssh-auth.sock
@@ -87,10 +87,3 @@ services:
     networks:
       - default
 
-volumes:
-  nfsmount:
-    driver: local
-    driver_opts:
-      type: nfs
-      o: addr=host.docker.internal,rw,nolock,hard,nointr,nfsvers=3
-      device: ":${PWD}"

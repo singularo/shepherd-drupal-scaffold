@@ -19,9 +19,9 @@ DOCKER_COMPOSE_FILE="docker-compose.${HOST_TYPE}.yml"
 set +u
 if [ -z "${DOMAIN}" ]; then
   if [[ "${HOST_TYPE}" =~ 'darwin' ]]; then
-    DOMAIN="127.0.0.1.xip.io"
+    DOMAIN="127.0.0.1.nip.io"
   else
-    DOMAIN="172.17.0.1.xip.io"
+    DOMAIN="172.17.0.1.nip.io"
   fi
 fi
 set -u
