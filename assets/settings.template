@@ -12,7 +12,7 @@ else {
   $databases['default']['default'] = array (
     'database' => getenv('DATABASE_NAME') ?: 'drupal',
     'username' => getenv('DATABASE_USER') ?: 'user',
-    'password' => getenv('DATABASE_PASSWORD_FILE') ? file_get_contents(getenv('DATABASE_PASSWORD_FILE')) : 'password',
+    'password' => getenv('DATABASE_PASSWORD_FILE') ? file_get_contents(getenv('DATABASE_PASSWORD_FILE')) : getenv('DATABASE_PASSWORD'),
     'host' => getenv('DATABASE_HOST') ?: 'db',
     'port' => getenv('DATABASE_PORT') ?: '3306',
     'driver' => getenv('DATABASE_DRIVER') ?: 'mysql',
