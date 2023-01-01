@@ -1,10 +1,10 @@
 # This dockerfile takes the current users uid/gid at build time and adjusts reality
 # so that the running user for www-data is actually the same as the launching user.
-FROM singularo/s2i-shepherd-drupal:8.0
+FROM singularo/s2i-shepherd-drupal:8.1
 
 ARG USER_ID
 ARG GROUP_ID
-ARG PHP_VERSION="8.0"
+ARG PHP_VERSION="8.1"
 
 # Need to switch from www-data to root to do the change of uid
 USER 0:0
