@@ -7,9 +7,10 @@ services:
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
-    image: singularo/s2i-shepherd-drupal-dev:8.0
-    hostname: ${PROJECT}
+    image: singularo/s2i-shepherd-drupal-dev:8.1
+    hostname: ${PROJECT}.${DOMAIN:-127.0.0.1.nip.io}
     environment:
+      CONFIG_SYNC_DIR: ../config/sync
       DATABASE_HOST: db
       DATABASE_USER: user
       DATABASE_PASSWORD: password
@@ -20,6 +21,7 @@ services:
       PUBLIC_DIR: /shared/public
       REDIS_ENABLED: 0
       REDIS_HOST: redis
+      SHEPHERD_ENVIRONMENT: local
       SHEPHERD_SECRET_PATH: /code/private
       SITE_TITLE: Drupal site
       SITE_MAIL: site@example.com
@@ -28,6 +30,9 @@ services:
       SITE_ADMIN_PASSWORD: password
       SSH_AUTH_SOCK: /run/host-services/ssh-auth.sock
       TMP_DIR: /shared/tmp
+
+      SIMPLETEST_BASE_URL: http://${PROJECT}.${DOMAIN:-127.0.0.1.nip.io}:8080
+      DTT_BASE_URL: http://${PROJECT}.${DOMAIN:-127.0.0.1.nip.io}:8080
 
       # Use jwilder/nginx-proxy for virtual hosts.
       VIRTUAL_HOST: ${PROJECT}.${DOMAIN:-127.0.0.1.nip.io}
@@ -86,4 +91,3 @@ services:
       - PORT=9000
     networks:
       - default
-
