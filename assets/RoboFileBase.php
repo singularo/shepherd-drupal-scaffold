@@ -235,28 +235,55 @@ abstract class RoboFileBase extends Tasks {
   }
 
   /**
-   * CLI debug enable.
+   * Debug enable.
    */
-  public function devXdebugEnable(): void {
-    // Only run this on environments configured with xdebug.
-    if (getenv('XDEBUG_CONFIG')) {
-      $this->say('Enabling xdebug.');
-      if (!$this->_exec('sudo phpenmod -v ALL -s cli xdebug')->wasSuccessful()) {
-        throw new \RuntimeException('Unable to enable xdebug.');
-      }
+  public function devXdebugEnable($reload = TRUE): void {
+    if (!getenv('XDEBUG_CONFIG')) {
+      return;
+    }
+    $this->say('Enabling xdebug.');
+    if (!$this->taskExec('sudo phpenmod -v ALL -s ALL xdebug')
+      ->printOutput(FALSE)
+      ->run()
+      ->wasSuccessful()) {
+      throw new \RuntimeException('Unable to enable xdebug.');
+    }
+    if ($reload) {
+      $this->reloadXdebugConfig();
     }
   }
 
   /**
-   * CLI debug disable.
+   * Debug disable.
    */
-  public function devXdebugDisable(): void {
-    // Only run this on environments configured with xdebug.
-    if (getenv('XDEBUG_CONFIG')) {
-      $this->say('Disabling xdebug.');
-      if (!$this->_exec('sudo phpdismod -v ALL -s cli xdebug')->wasSuccessful()) {
-        throw new \RuntimeException('Unable to enable xdebug.');
-      }
+  public function devXdebugDisable($reload = TRUE): void {
+    if (!getenv('XDEBUG_CONFIG')) {
+      return;
+    }
+    $this->say('Disabling xdebug.');
+    if (!$this->taskExec('sudo phpdismod -v ALL -s ALL xdebug')
+      ->printOutput(FALSE)
+      ->run()
+      ->wasSuccessful()) {
+      throw new \RuntimeException('Unable to disable xdebug.');
+    }
+    if ($reload) {
+      $this->reloadXdebugConfig();
+    }
+  }
+
+  /**
+   * Helper function to check which container type and restart processes.
+   */
+  private function reloadXdebugConfig() {
+    // Check if using s6, otherwise its apache2.
+    if (file_exists('/etc/s6-overlay/s6-rc.d/php-fpm/run')) {
+      $this->_exec('sudo /command/s6-svc -r /service/php-fpm');
+      $this->say('Disabled xdebug.');
+    }
+    else {
+      $this->yell('You will need to start ./dsh again');
+      $this->_exec('sudo kill -HUP 1');
     }
   }
 
@@ -304,25 +331,7 @@ abstract class RoboFileBase extends Tasks {
    *   Whether to clear the cache after changes.
    */
   public function devAggregateAssetsDisable(bool $cacheClear = TRUE): void {
-    $result = $this->drush('config:set')
-      ->rawArg('system.performance js.preprocess 0')
-      ->option('yes')
-      ->run();
-    if (!$result->wasSuccessful()) {
-      throw new \RuntimeException('Aggregate disable failed.');
-    }
-
-    $result = $this->drush('config:set')
-      ->rawArg('system.performance css.preprocess 0 -y')
-      ->option('yes')
-      ->run();
-    if (!$result->wasSuccessful()) {
-      throw new \RuntimeException('Aggregate disable failed.');
-    }
-
-    if ($cacheClear) {
-      $this->devCacheRebuild();
-    }
+    $this->preprocessSet(0, $cacheClear);
   }
 
   /**
@@ -332,8 +341,20 @@ abstract class RoboFileBase extends Tasks {
    *   Whether to clear the cache after changes.
    */
   public function devAggregateAssetsEnable(bool $cacheClear = TRUE): void {
+    $this->preprocessSet(1, $cacheClear);
+  }
+
+  /**
+   * Helper to actually update files.
+   *
+   * @param int $status
+   *   Pass in 0 or 1 for enabled/disabled.
+   * @param bool $cacheClear
+   *   Whether to clear the cache after changes.
+   */
+  private function preprocessSet(int $status = 1, bool $cacheClear = TRUE) {
     $result = $this->drush('config:set')
-      ->args('system.performance js.preprocess 1')
+      ->args("system.performance js.preprocess $status")
       ->option('yes')
       ->run();
     if (!$result->wasSuccessful()) {
@@ -341,7 +362,7 @@ abstract class RoboFileBase extends Tasks {
     }
 
     $result = $this->drush('config:set')
-      ->args('system.performance css.preprocess 1')
+      ->args("system.performance css.preprocess $status")
       ->option('yes')
       ->run();
     if (!$result->wasSuccessful()) {

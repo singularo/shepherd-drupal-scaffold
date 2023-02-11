@@ -131,8 +131,10 @@ class Shepherd {
    * Ensure that the config sync directory exists and is writable.
    */
   public function ensureConfigSync(): void {
+    $config_sync = getenv('CONFIG_SYNC_DIR');
+
     $this->filesystem->mkdir([
-      $this->projectPath . '/config-sync',
+      $this->projectPath . $config_sync,
     ], 0755);
   }
 
