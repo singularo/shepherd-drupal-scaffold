@@ -130,8 +130,11 @@ class Shepherd {
   /**
    * Ensure that the config sync directory exists and is writable.
    */
-  public function ensureConfigSync(): void {
-    $config_sync = getenv('CONFIG_SYNC_DIR');
+  public function ensureConfigSync($io): void {
+    if (!$config_sync = getenv('CONFIG_SYNC_DIR')) {
+      return;
+    }
+    $io->write('Ensuring ' . $config_sync . ' folder exists.');
 
     $this->filesystem->mkdir([
       $this->projectPath . $config_sync,
@@ -141,7 +144,9 @@ class Shepherd {
   /**
    * Ensure that the shared/files directories exists and are writable.
    */
-  public function ensureShared(): void {
+  public function ensureShared($io): void {
+    $io->write('Ensuring shared filesystem folder exists.');
+
     $this->filesystem->mkdir([
       $this->projectPath . '/shared',
       $this->projectPath . '/shared/public',
@@ -154,7 +159,9 @@ class Shepherd {
   /**
    * Ensure that the scripts are executable.
    */
-  public function makeExecutable(): void {
+  public function makeExecutable($io): void {
+    $io->write('Ensuring dsh utility scripts are executable.');
+
     $this->checkExistsSetPerm([
       $this->projectPath . '/dsh' => 0755,
       $this->projectPath . '/dsh_bash' => 0755,

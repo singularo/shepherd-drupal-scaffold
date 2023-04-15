@@ -73,18 +73,16 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    * @throws \Exception
    */
   public function postInstall(Event $event): void {
+    $io = $event->getIO();
     $shepherd = new Shepherd($this->composer, $this->io, $event->getName());
-    $event->getIO()->write('Creating settings.php file if not present.');
+    $io->write('Creating settings.php file if not present.');
     $shepherd->populateSettingsFile();
 
     // Some things are only really required for dev.
     if (getenv('SHEPHERD_ENVIRONMENT') !== 'live') {
-      $event->getIO()->write('Ensuring config-sync folder exists.');
-      $shepherd->ensureConfigSync();
-      $event->getIO()->write('Ensuring shared filesystem folder exists.');
-      $shepherd->ensureShared();
-      $event->getIO()->write('Ensuring dsh utility scripts are executable.');
-      $shepherd->makeExecutable();
+      $shepherd->ensureConfigSync($io);
+      $shepherd->ensureShared($io);
+      $shepherd->makeExecutable($io);
     }
   }
 
