@@ -251,6 +251,7 @@ abstract class RoboFileBase extends Tasks {
     if ($reload) {
       $this->reloadXdebugConfig();
     }
+    $this->say('Enabled xdebug.');
   }
 
   /**
@@ -270,6 +271,7 @@ abstract class RoboFileBase extends Tasks {
     if ($reload) {
       $this->reloadXdebugConfig();
     }
+    $this->say('Disabled xdebug.');
   }
 
   /**
@@ -279,7 +281,6 @@ abstract class RoboFileBase extends Tasks {
     // Check if using s6, otherwise its apache2.
     if (file_exists('/etc/s6-overlay/s6-rc.d/php-fpm/run')) {
       $this->_exec('sudo /command/s6-svc -r /service/php-fpm');
-      $this->say('Disabled xdebug.');
     }
     else {
       $this->yell('You will need to start ./dsh again');
