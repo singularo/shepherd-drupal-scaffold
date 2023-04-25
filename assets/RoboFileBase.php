@@ -355,7 +355,7 @@ abstract class RoboFileBase extends Tasks {
    */
   private function preprocessSet(int $status = 1, bool $cacheClear = TRUE) {
     $result = $this->drush('config:set')
-      ->args("system.performance js.preprocess $status")
+      ->rawArg("system.performance js.preprocess $status")
       ->option('yes')
       ->run();
     if (!$result->wasSuccessful()) {
@@ -363,7 +363,7 @@ abstract class RoboFileBase extends Tasks {
     }
 
     $result = $this->drush('config:set')
-      ->args("system.performance css.preprocess $status")
+      ->rawArg("system.performance css.preprocess $status")
       ->option('yes')
       ->run();
     if (!$result->wasSuccessful()) {
