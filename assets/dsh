@@ -8,37 +8,53 @@ set -euo pipefail
 if [ -f .env ]; then
   source .env
 fi
-export PROJECT=${PROJECT:-$(basename "${PWD}" | tr -d '.')}
-export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-${PROJECT}}
+PROJECT=${PROJECT:-$(basename "${PWD}" | tr -d '.')}
+export PROJECT
 
 # Work out some other values we need.
 HOST_TYPE=$(uname | tr '[:upper:]' '[:lower:]')
 DOCKER_COMPOSE_FILE="docker-compose.${HOST_TYPE}.yml"
+DOCKER_COMPOSE="docker-compose --ansi never -f"
+SHELL_CONTAINER=web
 
 # Set domain default if its not set.
 set +u
-if [ -z "${DOMAIN}" ]; then
-  if [[ "${HOST_TYPE}" =~ 'darwin' ]]; then
+if [[ "${HOST_TYPE}" =~ 'darwin' ]]; then
+  if [ -z "${DOMAIN}" ]; then
     DOMAIN="127.0.0.1.nip.io"
-  else
+  fi
+  CONTAINER_SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock
+else
+  if [ -z "${DOMAIN}" ]; then
     DOMAIN="172.17.0.1.nip.io"
   fi
+  CONTAINER_SSH_AUTH_SOCK=/ssh/$(basename ${SSH_AUTH_SOCK})
 fi
 set -u
-
-# Ultimately permit overriding repo docker-compose.yml with custom file.
-if [ -f docker-compose.yml ]; then
-  DOCKER_COMPOSE_FILE='docker-compose.yml'
-fi
+export DOMAIN
+export CONTAINER_SSH_AUTH_SOCK
 
 # Set user variables
 USER_ID=$(id -u)
+export USER_ID
 GROUP_ID=$(id -g)
+export GROUP_ID
 
 # Setup some functions to output warnings.
 notice()  { printf "\e[32;01m%s\e[39;49;00m\n" "$1"; }
 warning() { printf "\e[33;01m%s\e[39;49;00m\n" "$1"; }
 error()   { printf "\e[31;01m%s\e[39;49;00m\n" "$1"; }
+
+# Ensure required docker file is at least present
+if [ ! -f ${DOCKER_COMPOSE_FILE} ]; then
+  # Ultimately permit overriding repo docker-compose.yml with custom file.
+  if [ -f docker-compose.yml ]; then
+    DOCKER_COMPOSE_FILE='docker-compose.yml'
+  else
+    error "Unable to locate ${DOCKER_COMPOSE_FILE} in current directory."
+    exit
+  fi
+fi
 
 # Ensure script is NOT running inside a container - must be run from host.
 if [ -f /.dockerenv ]; then
@@ -55,6 +71,7 @@ setup_nginx() {
     warning "Starting nginx proxy"
     docker run -d -p 8080:80  \
       -v /var/run/docker.sock:/tmp/docker.sock:ro \
+      -v ./docker/dsh_proxy.conf:/etc/nginx/conf.d/dsh_proxy.conf \
       --restart always --name nginx-proxy \
       jwilder/nginx-proxy:latest
   fi
@@ -88,20 +105,22 @@ stop_nginx() {
 dsh_start() {
   if [[ ! $(docker ps --format "{{.Names}}" --filter "name=^${PROJECT}_web") =~ "${PROJECT}_web" ]]; then
     notice "Starting containers."
-    # Too slow to leave in # docker-compose -f ${DOCKER_COMPOSE_FILE} build --parallel
+    # Too slow to leave in # ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} build --parallel
     if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=^${PROJECT}_default\$") =~ "${PROJECT}_default" ]]; then
       notice "Creating network."
       docker network create "${PROJECT}_default"
     fi
     setup_nginx
 
-    docker-compose -f ${DOCKER_COMPOSE_FILE} up -d
+    ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} up -d
     URL="http://${PROJECT}.${DOMAIN}:8080"
-    notice "Please wait about 10 seconds for the database to settle.
-
+    set +u
+    if [ "$1" != "quiet" ]; then
+      notice "Please wait about 10 seconds for the database to settle.
 The project is now available at: ${URL}.
-
 Files are available in /code, You may need to 'robo build' to install."
+    fi
+    set -u
   fi
 }
 
@@ -110,10 +129,38 @@ Files are available in /code, You may need to 'robo build' to install."
 dsh_shell() {
   dsh_start
 
-  docker-compose -f ${DOCKER_COMPOSE_FILE} exec \
-   -e COLUMNS="$(tput cols)" \
-   -e LINES="$(tput lines)" \
-   web "${@:-./dsh_bash}"
+  # Setup docker to run the shell as the current user, thus removing any
+  # permission issues.
+  EXISTING_USER=$(${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} id -u www-data | sed -e 's/\r//g')
+  if [ ${EXISTING_USER} != ${USER_ID} ]; then
+    if ! ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} id -u ${USER} >/dev/null 2>&1; then
+      notice "Setting up user $USER on web container."
+      # Add user with local $USER name to container.
+      ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} adduser --disabled-password --uid ${UID} \
+        --gecos ${USER} --home /home/${USER} ${USER} >/dev/null
+      # Allow sudo without password for user.
+      ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} /bin/bash -c "echo '${USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/${USER}"
+    fi
+  else
+    USER=www-data
+  fi
+
+  #--env DTT_BASE_URL=${DTT_BASE_URL} \
+  #--env DTT_MINK_DRIVER_ARGS="${DTT_MINK_DRIVER_ARGS}" \
+  #--env SIMPLETEST_BASE_URL=${SIMPLETEST_BASE_URL} \
+  #--env SIMPLETEST_DB=${SIMPLETEST_DB} \
+  #--env NEWRELIC_ENABLED=true \
+  #--env NEWRELIC_APP="bob" \
+  #--env NEWRELIC_LICENSE="NewRelicLicenseKeyHere" \
+
+  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec \
+    -u ${USER} \
+    --env PROJECT=${PROJECT} \
+    --env DOMAIN=${DOMAIN} \
+    --env SSH_AUTH_SOCK=${CONTAINER_SSH_AUTH_SOCK} \
+    --env COLUMNS="$(tput cols)" \
+    --env LINES="$(tput lines)" \
+    ${SHELL_CONTAINER} ${@:-./dsh_bash}
 }
 
 # Command: ./dsh stop
@@ -121,7 +168,7 @@ dsh_shell() {
 dsh_stop() {
   notice "Stopping containers."
   stop_nginx
-  docker-compose -f ${DOCKER_COMPOSE_FILE} stop
+  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} stop
 }
 
 # Command: ./dsh down
@@ -129,7 +176,7 @@ dsh_stop() {
 dsh_down() {
   stop_nginx
   notice "Removing containers."
-  docker-compose -f ${DOCKER_COMPOSE_FILE} down -v
+  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} down -v
 }
 
 # Command: ./dsh purge
@@ -142,21 +189,13 @@ dsh_purge() {
 # Command: ./dsh status
 # Shows status information about project containers.
 dsh_status() {
-  docker-compose -f ${DOCKER_COMPOSE_FILE} ps
+  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} ps
 }
 
 # Command: ./dsh logs
 # Tails logs from web container.
 dsh_logs() {
-  docker-compose -f ${DOCKER_COMPOSE_FILE} logs -f web
-}
-
-dsh_project() {
-  set +e
-  if [ -f dsh.project ]; then
-    source dsh.project
-  fi
-  set -e
+  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} logs -f web
 }
 
 # Command: ./dsh pull
@@ -164,95 +203,10 @@ dsh_project() {
 dsh_pull() {
   # docker-compose doesn't resolve sub-dependencies in Dockerfiles.
   docker pull singularo/s2i-shepherd-drupal
-  docker-compose -f ${DOCKER_COMPOSE_FILE} pull --ignore-pull-failures
-  docker-compose -f ${DOCKER_COMPOSE_FILE} build
+  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} pull --ignore-pull-failures
+  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} build
 }
 
-# Command: ./dsh nfs
-# Sets up NFS integration for OSX.
-NFS_FILE=/etc/exports
-NFS_LINE="/Users -alldirs -mapall=${USER_ID}:${GROUP_ID} localhost"
-dsh_setup_nfs() {
-  if [ "$(uname)" != "Darwin" ]; then
-    notice "This script is OSX-only. Please do not run it on any other Unix."
-    exit 1
-  fi
-
-  if [[ ${EUID} -eq 0 ]]; then
-    notice "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
-    exit 1
-  fi
-
-  notice " +-----------------------------+"
-  notice " | Setup native NFS for Docker |"
-  notice " +-----------------------------+"
-
-  warning "WARNING: This script will shut down running containers."
-  warning -n "Do you wish to proceed? [y]: "
-  read -r DECISION
-
-  if [ "${DECISION}" != "y" ]; then
-    warning "Exiting. No changes made."
-    exit 1
-  fi
-
-  if ! docker ps > /dev/null 2>&1 ; then
-    notice "== Waiting for docker to start..."
-  fi
-
-  open -a Docker
-
-  while ! docker ps > /dev/null 2>&1 ; do sleep 2; done
-
-  notice "== Stopping running docker containers..."
-  set +e
-  docker-compose -f ${DOCKER_COMPOSE_FILE} down > /dev/null 2>&1
-  docker volume prune -f > /dev/null
-  set -e
-
-  osascript -e 'quit app "Docker"'
-
-  notice "== Resetting folder permissions..."
-  sudo chown -R "${USER_ID}:${GROUP_ID}" .
-
-  notice "== Setting up nfs..."
-  sudo cp /dev/null "${NFS_FILE}"
-  grep -qF -- "${NFS_LINE}" "${NFS_FILE}" || sudo echo "${NFS_LINE}" | sudo tee -a "${NFS_FILE}" > /dev/null
-
-  LINE="nfs.server.mount.require_resv_port = 0"
-  FILE=/etc/nfs.conf
-  grep -qF -- "${LINE}" "${FILE}" || sudo echo "${LINE}" | sudo tee -a "${FILE}" > /dev/null
-
-  notice "== Restarting nfsd..."
-  sudo nfsd restart
-
-  notice "== Restarting docker..."
-  open -a Docker
-
-  while ! docker ps > /dev/null 2>&1 ; do sleep 2; done
-
-  notice "SUCCESS! Now go run your containers 🐳"
-}
-
-# Command: ./dsh rnfs
-# Removes nfs setup.
-dsh_remove_nfs() {
-  if [ "$(uname)" != "Darwin" ]; then
-    notice "This script is OSX-only. Please do not run it on any other Unix."
-    exit 1
-  fi
-
-  if [[ ${EUID} -eq 0 ]]; then
-    notice "This script must NOT be run with sudo/root. Please re-run without sudo." 1>&2
-    exit 1
-  fi
-
-  notice "== Removing nfsd exports..."
-  sudo sed -i '' "/$(echo "${NFS_LINE}" | sed 's/\//\\\//g')/d" ${NFS_FILE}
-  warning "== Restarting nfsd..."
-  sudo nfsd restart
-  warning "== Done"
-}
 
 dsh_help() {
   printf "\nUsage: dsh COMMAND\n
@@ -267,9 +221,6 @@ Commands:
 \t start\tStart the docker containers, network and proxy.
 \t status\tShow the status of this projects containers.
 \t stop\tStop the docker containers, network and proxy, but keep data for a re-start.
-Mac specific setup:
-\t nfs\tSetup NFS for macOS.
-\t rnfs\tRemove NFS for macOS.
 \nIf no command is given, shell is the default.
 Commands can be shortened to their unique component, eg ./dsh sh is the same as ./dsh shell.\n\n"
 }
@@ -290,17 +241,11 @@ case ${COMMAND} in
   l*)
     dsh_logs
     ;;
-  nfs)
-    dsh_setup_nfs
-    ;;
   pul*)
     dsh_pull
     ;;
   pur*)
     dsh_purge
-    ;;
-  rnfs)
-    dsh_remove_nfs
     ;;
   sh*|ss*)
     dsh_shell "${@:2}"
