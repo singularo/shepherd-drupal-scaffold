@@ -38,6 +38,10 @@
           "path": "assets/docker/Dockerfile",
           "overwrite": false
         },
+        "[project-root]/docker/dsh_proxy.conf": {
+          "path": "assets/docker/dsh_proxy.conf",
+          "overwrite": false
+        },
         "[project-root]/docker/xdebug.ini": {
           "path": "assets/docker/xdebug.ini",
           "overwrite": false
