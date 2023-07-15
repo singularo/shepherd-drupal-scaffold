@@ -131,13 +131,13 @@ class Shepherd {
    * Ensure that the config sync directory exists and is writable.
    */
   public function ensureConfigSync($io): void {
-    if (!$config_sync = getenv('CONFIG_SYNC_DIR')) {
+    if (!$config_sync_dir = getenv('CONFIG_SYNC_DIR')) {
       return;
     }
-    $io->write('Ensuring ' . $config_sync . ' folder exists.');
+    $io->write('Ensuring ' . $config_sync_dir . ' folder exists.');
 
     $this->filesystem->mkdir([
-      $this->projectPath . $config_sync,
+      $config_sync_dir,
     ], 0755);
   }
 
