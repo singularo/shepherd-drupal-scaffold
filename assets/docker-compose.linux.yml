@@ -75,7 +75,7 @@ services:
       - default
 
   selenium:
-    image: selenium/standalone-chrome:latest
+    image: selenium/standalone-chrome:106.0
     volumes:
       - /dev/shm:/dev/shm
     networks:
