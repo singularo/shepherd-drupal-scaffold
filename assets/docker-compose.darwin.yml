@@ -7,7 +7,8 @@ services:
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
-    image: singularo/s2i-shepherd-drupal-dev:8.1
+    # This image is the local development version, built using the above details.
+    image: myproject/s2i-shepherd-local:develop
     hostname: ${PROJECT}.${DOMAIN:-127.0.0.1.nip.io}
     environment:
       CONFIG_SYNC_DIR: ../config/sync
