@@ -81,10 +81,6 @@
         "[project-root]/RoboFileBase.php": {
           "path": "assets/RoboFileBase.php",
           "overwrite": true
-        },
-        "[project-root]/web/.htaccess": {
-          "path": "assets/web/.htaccess",
-          "overwrite": true
         }
       }
     }
