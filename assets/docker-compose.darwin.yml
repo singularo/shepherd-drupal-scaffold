@@ -39,7 +39,10 @@ services:
       # Do not define this as '/' or apache2 will give strange behaviour, to test locally,
       # change to the web directory and create a symlink to the subpath name eg ln -s . subpath
       # WEB_PATH: /subpath
-      XDEBUG_CONFIG: "remote_host=docker.for.mac.localhost"
+
+      XDEBUG_CONFIG: "remote_host=host.docker.internal discover_client_host=1 client_host=host.docker.internal"
+      XDEBUG_MODE: debug,develop
+      XDEBUG_SESSION: 1
     env_file:
       - .env
     volumes:
@@ -68,11 +71,6 @@ services:
     networks:
       - default
 
-  redis:
-    image: redis:alpine
-    networks:
-      - default
-
   memcached:
     image: memcached:alpine
     networks:
@@ -82,12 +80,5 @@ services:
     image: selenium/standalone-chrome:latest
     volumes:
       - /dev/shm:/dev/shm
-    networks:
-      - default
-
-  xdebug:
-    image: nickschuch/d4m-tcp-forwarder
-    environment:
-      - PORT=9000
     networks:
       - default
