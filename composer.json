@@ -54,12 +54,12 @@
           "path": "assets/drush/drush.yml",
           "overwrite": false
         },
-        "[project-root]/dsh_bash": {
-          "path": "assets/dsh_bash",
-          "overwrite": false
-        },
         "[project-root]/.env": {
           "path": "assets/.env",
+          "overwrite": false
+        },
+        "[project-root]/.gitignore": {
+          "path": "assets/.gitignore",
           "overwrite": false
         },
         "[project-root]/phpcs.xml": {
@@ -72,6 +72,10 @@
         },
         "[project-root]/dsh": {
           "path": "assets/dsh",
+          "overwrite": true
+        },
+        "[project-root]/dsh_bash": {
+          "path": "assets/dsh_bash",
           "overwrite": true
         },
         "[project-root]/RoboFileBase.php": {
