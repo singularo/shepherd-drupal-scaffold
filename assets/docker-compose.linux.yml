@@ -19,8 +19,6 @@ services:
       MEMCACHE_HOST: memcached
       PHP_IDE_CONFIG: serverName=${PROJECT}.${DOMAIN:-172.17.0.1.nip.io}
       PUBLIC_DIR: /shared/public
-      REDIS_ENABLED: 0
-      REDIS_HOST: redis
       SHEPHERD_ENVIRONMENT: local
       SHEPHERD_SECRET_PATH: /code/private
       SITE_TITLE: Drupal site
