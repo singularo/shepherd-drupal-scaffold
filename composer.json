@@ -89,6 +89,11 @@
       }
     }
   },
+  "scripts": {
+    "post-drupal-scaffold-cmd": [
+      "cd web && patch -p1 < ../patches/htaccess.patch"
+    ]
+  },
   "config": {
     "allow-plugins": {
       "drupal/core-composer-scaffold": true,
