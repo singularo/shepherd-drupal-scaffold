@@ -105,14 +105,8 @@ stop_nginx() {
 dsh_start() {
   if [[ ! $(docker ps --format "{{.Names}}" --filter "name=^${PROJECT}_web") =~ "${PROJECT}_web" ]]; then
     notice "Starting containers."
-    # Too slow to leave in # ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} build --parallel
-    if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=^${PROJECT}_default\$") =~ "${PROJECT}_default" ]]; then
-      notice "Creating network."
-      docker network create "${PROJECT}_default"
-    fi
-    setup_nginx
-
     ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} up -d
+    setup_nginx
     URL="http://${PROJECT}.${DOMAIN}:8080"
     set +u
     if [ "$1" != "quiet" ]; then
