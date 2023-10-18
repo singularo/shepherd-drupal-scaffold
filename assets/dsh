@@ -14,7 +14,7 @@ export PROJECT
 # Work out some other values we need.
 HOST_TYPE=$(uname | tr '[:upper:]' '[:lower:]')
 DOCKER_COMPOSE_FILE="docker-compose.${HOST_TYPE}.yml"
-DOCKER_COMPOSE="docker-compose --ansi never -f"
+DOCKER_COMPOSE="docker compose -f"
 SHELL_CONTAINER=web
 
 # Set domain default if its not set.
