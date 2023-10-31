@@ -277,7 +277,7 @@ abstract class RoboFileBase extends Tasks {
   /**
    * Helper function to check which container type and restart processes.
    */
-  private function reloadXdebugConfig() {
+  protected function reloadXdebugConfig() {
     // Check if using s6, otherwise its apache2.
     if (file_exists('/etc/s6-overlay/s6-rc.d/php-fpm/run')) {
       $this->_exec('sudo /command/s6-svc -r /service/php-fpm');
