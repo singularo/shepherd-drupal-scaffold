@@ -26,10 +26,8 @@
     "class": "Singularo\\ShepherdDrupalScaffold\\ShepherdPlugin",
     "drupal-scaffold": {
       "file-mapping": {
-        "file-mapping": {
-          "[web-root]/robots.txt": false,
-          "[web-root]/.htaccess": false
-        },
+        "[web-root]/robots.txt": false,
+        "[web-root]/.htaccess": false,
         "[project-root]/docker-compose.linux.yml": {
           "path": "assets/docker-compose.linux.yml",
           "overwrite": false
