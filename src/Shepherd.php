@@ -132,12 +132,14 @@ class Shepherd {
    */
   public function ensureConfigSync($io): void {
     if (!$config_sync_dir = getenv('CONFIG_SYNC_DIR')) {
-      return;
+      $config_sync_dir = "config/sync";
     }
+    // Remove legacy leading chars.
+    $config_sync_dir = ltrim($config_sync_dir, './');
     $io->write('Ensuring ' . $config_sync_dir . ' folder exists.');
 
     $this->filesystem->mkdir([
-      $config_sync_dir,
+      $this->projectPath . '/' . $config_sync_dir,
     ], 0755);
   }
 

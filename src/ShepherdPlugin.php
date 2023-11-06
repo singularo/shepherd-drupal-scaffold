@@ -69,6 +69,7 @@ class ShepherdPlugin implements PluginInterface, EventSubscriberInterface {
    * Post update command event to execute the scaffolding.
    *
    * @param \Composer\Script\Event $event
+   *   The composer event to handle.
    *
    * @throws \Exception
    */
