@@ -28,11 +28,14 @@ else
   if [ -z "${DOMAIN}" ]; then
     DOMAIN="172.17.0.1.nip.io"
   fi
-  CONTAINER_SSH_AUTH_SOCK=/ssh/$(basename ${SSH_AUTH_SOCK})
+  # If ssh is setup, try and add it in.
+  if [ -n "${SSH_AUTH_SOCK}" ]; then
+    CONTAINER_SSH_AUTH_SOCK=/ssh/$(basename ${SSH_AUTH_SOCK})
+    export CONTAINER_SSH_AUTH_SOCK
+  fi
 fi
 set -u
 export DOMAIN
-export CONTAINER_SSH_AUTH_SOCK
 
 # Set user variables
 USER_ID=$(id -u)
@@ -139,6 +142,7 @@ dsh_shell() {
     USER=www-data
   fi
 
+  # Possible options to pass to the container.
   #--env DTT_BASE_URL=${DTT_BASE_URL} \
   #--env DTT_MINK_DRIVER_ARGS="${DTT_MINK_DRIVER_ARGS}" \
   #--env SIMPLETEST_BASE_URL=${SIMPLETEST_BASE_URL} \
@@ -147,13 +151,18 @@ dsh_shell() {
   #--env NEWRELIC_APP="bob" \
   #--env NEWRELIC_LICENSE="NewRelicLicenseKeyHere" \
 
+  options=("--env PROJECT=${PROJECT}" "--env DOMAIN=${DOMAIN}" "--env COLUMNS=\"$(tput cols)\"" "--env LINES=\"$(tput lines)\"")
+
+  # Add in the ssh var.
+  set +u
+  if [ -n "${CONTAINER_AUTH_SOCK}" ]; then
+    options+=("--env SSH_AUTH_SOCK=${CONTAINER_SSH_AUTH_SOCK}")
+  fi
+  set -u
+
   ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec \
     -u ${USER} \
-    --env PROJECT=${PROJECT} \
-    --env DOMAIN=${DOMAIN} \
-    --env SSH_AUTH_SOCK=${CONTAINER_SSH_AUTH_SOCK} \
-    --env COLUMNS="$(tput cols)" \
-    --env LINES="$(tput lines)" \
+    ${options[@]} \
     ${SHELL_CONTAINER} ${@:-./dsh_bash}
 }
 
