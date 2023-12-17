@@ -186,7 +186,7 @@ dsh_down() {
 # Stops project, then takes down containers, removes volumes and remove dev image.
 dsh_purge() {
   dsh_down
-  docker rmi -f singularo/s2i-shepherd-drupal-dev
+  grep image ${DOCKER_COMPOSE_FILE} | awk '{ print $2 }' | xargs docker rmi -f
 }
 
 # Command: ./dsh status
