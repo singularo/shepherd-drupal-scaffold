@@ -53,7 +53,7 @@ services:
       - .:/code
       - ./shared:/shared
       - ./shared/public:/code/web/sites/default/files
-      - ${XDG_RUNTIME_DIR}/keyring:/ssh
+      - ${SSH_AUTH_SOCK}:/ssh/ssh
     networks:
       - default
 
@@ -70,7 +70,7 @@ services:
       - default
 
   mail:
-    image: mailhog/mailhog
+    image: axllent/mailpit
     environment:
       VIRTUAL_HOST: mail.${PROJECT}.${DOMAIN:-172.17.0.1.nip.io}
       VIRTUAL_PORT: 8025
