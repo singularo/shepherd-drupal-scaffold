@@ -142,23 +142,47 @@ dsh_shell() {
     USER=www-data
   fi
 
-  # Possible options to pass to the container.
-  #--env DTT_BASE_URL=${DTT_BASE_URL} \
-  #--env DTT_MINK_DRIVER_ARGS="${DTT_MINK_DRIVER_ARGS}" \
-  #--env SIMPLETEST_BASE_URL=${SIMPLETEST_BASE_URL} \
-  #--env SIMPLETEST_DB=${SIMPLETEST_DB} \
-  #--env NEWRELIC_ENABLED=true \
-  #--env NEWRELIC_APP="bob" \
-  #--env NEWRELIC_LICENSE="NewRelicLicenseKeyHere" \
-
-  options=("--env PROJECT=${PROJECT}" "--env DOMAIN=${DOMAIN}" "--env COLUMNS=\"$(tput cols)\"" "--env LINES=\"$(tput lines)\"")
-
-  # Add in the ssh var.
+  # Build an array of options to pass to the container.
   set +u
+  options=()
+  if [ -n "${DTT_BASE_URL}" ]; then
+    options+=("--env DTT_BASE_URL=${DTT_BASE_URL}")
+  fi
+
+  if [ -n "${DTT_MINK_DRIVER_ARGS}" ]; then
+    options+=("--env DTT_MINK_DRIVER_ARGS=${DTT_MINK_DRIVER_ARGS}")
+  fi
+
+  if [ -n "${SIMPLETEST_BASE_URL}" ]; then
+    options+=("--env SIMPLETEST_BASE_URL=${SIMPLETEST_BASE_URL}")
+  fi
+
+  if [ -n "${SIMPLETEST_DB}" ]; then
+    options+=("--env SIMPLETEST_DB=${SIMPLETEST_DB}")
+  fi
+
+  if [ -n "${NEWRELIC_ENABLED}" ]; then
+    options+=("--env NEWRELIC_ENABLED=${NEWRELIC_ENABLED}")
+  fi
+
+  if [ -n "${NEWRELIC_APP}" ]; then
+    options+=("--env NEWRELIC_APP=${NEWRELIC_APP}")
+  fi
+
+  if [ -n "${NEWRELIC_LICENSE}" ]; then
+    options+=("--env NEWRELIC_LICENSE=${NEWRELIC_LICENSE}")
+  fi
+
   if [ -n "${CONTAINER_AUTH_SOCK}" ]; then
     options+=("--env SSH_AUTH_SOCK=${CONTAINER_SSH_AUTH_SOCK}")
   fi
   set -u
+
+  # These things should always be present.
+  options+=("--env PROJECT=${PROJECT}")
+  options+=("--env DOMAIN=${DOMAIN}")
+  options+=("--env COLUMNS=\"$(tput cols)\"")
+  options+=("--env LINES=\"$(tput lines)\"")
 
   ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec \
     -u ${USER} \
