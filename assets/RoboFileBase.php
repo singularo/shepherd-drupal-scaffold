@@ -45,6 +45,13 @@ abstract class RoboFileBase extends Tasks {
   protected array $config = [];
 
   /**
+   * Store if xdebug was enabled before run.
+   *
+   * @var bool
+   */
+  protected bool $reEnableXdebug = FALSE;
+
+  /**
    * Initialize config variables and apply overrides.
    */
   public function __construct() {
@@ -57,6 +64,15 @@ abstract class RoboFileBase extends Tasks {
 
     // Get the drupal profile.
     $this->setDrupalProfile();
+  }
+
+  /**
+   * Our own destructor to restore xdebug, maybe.
+   */
+  public function __destruct() {
+    if ($this->reEnableXdebug) {
+      $this->devXdebugEnable();
+    }
   }
 
   /**
@@ -227,18 +243,33 @@ abstract class RoboFileBase extends Tasks {
     $this->devCacheRebuild();
   }
 
+
   /**
-   * Perform cache clear in the app directory.
+   * Override the cache rebuild to also restart php.
    */
   public function devCacheRebuild(): void {
     $this->drush('cache:rebuild')->run();
+    if (!getenv('GITLAB_CI')) {
+      $this->reloadXdebugConfig();
+    }
   }
 
   /**
    * Debug enable.
+   *
+   * Xdebug enable is typically long-lived, so there is no flag to re-disable.
+   *
+   * @param bool $reload
+   *   Whether to reload the service.
+   *
+   * @aliases debug
    */
-  public function devXdebugEnable($reload = TRUE): void {
+  public function devXdebugEnable(bool $reload = TRUE): void {
     if (!getenv('XDEBUG_CONFIG')) {
+      return;
+    }
+    if (extension_loaded('xdebug')) {
+      $this->say('Xdebug already enabled');
       return;
     }
     $this->say('Enabling xdebug.');
@@ -256,11 +287,32 @@ abstract class RoboFileBase extends Tasks {
 
   /**
    * Debug disable.
+   *
+   * Store the state so we can decide to re-enable it in some cases.
+   * Xdebug is commonly disabled for speed, but then should be re-enabled.
+   * This function allows for that to occur.
+   *
+   * @param bool $reload
+   *   Whether to reload the service.
+   *
+   * @aliases nodebug
    */
-  public function devXdebugDisable($reload = TRUE): void {
+  public function devXdebugDisable(bool $reload = TRUE): void {
     if (!getenv('XDEBUG_CONFIG')) {
       return;
     }
+    if (!extension_loaded('xdebug')) {
+      $this->say('Xdebug already disabled');
+      return;
+    }
+
+    // If its not being explicitly disabled, set re-enable on destruct.
+    $command = $this->input()->getArguments()['command'];
+    if (!in_array($command, ['dev:xdebug-disable', 'nodebug'])) {
+      $this->reEnableXdebug = TRUE;
+    }
+
+    // Actually disable xdebug.
     $this->say('Disabling xdebug.');
     if (!$this->taskExec('sudo phpdismod -v ALL -s ALL xdebug')
       ->printOutput(FALSE)
@@ -268,6 +320,7 @@ abstract class RoboFileBase extends Tasks {
       ->wasSuccessful()) {
       throw new \RuntimeException('Unable to disable xdebug.');
     }
+
     if ($reload) {
       $this->reloadXdebugConfig();
     }
