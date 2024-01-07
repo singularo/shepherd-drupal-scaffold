@@ -31,4 +31,22 @@ class RoboFile extends RoboFileBase {
   }
   // @codingStandardsIgnoreEnd
 
-}
+  /**
+   * Example of how to install from existing config.
+   * Uncomment to use.
+   *
+  public function buildInstall(): void {
+    $this->drush('site:install')
+      ->arg($this->drupalProfile)
+      ->option('existing-config')
+      ->option('account-mail', $this->config['site']['admin_email'])
+      ->option('account-name', $this->config['site']['admin_user'])
+      ->option('account-pass', $this->config['site']['admin_password'])
+      ->option('site-name', $this->config['site']['title'])
+      ->option('site-mail', $this->config['site']['mail'])
+      ->option('yes')
+      ->run();
+    }
+    */
+
+  }
