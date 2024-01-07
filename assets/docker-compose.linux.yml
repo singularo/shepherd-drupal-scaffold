@@ -28,6 +28,7 @@ services:
       SITE_ADMIN_EMAIL: admin@example.com
       SITE_ADMIN_USERNAME: admin
       SITE_ADMIN_PASSWORD: password
+      #SQLITE_DATABASE: /shared/database.sqlite3
       SSH_AUTH_SOCK: /ssh/ssh
       TMP_DIR: /shared/tmp
 
@@ -35,7 +36,7 @@ services:
       DTT_BASE_URL: http://${PROJECT}.${DOMAIN:-172.17.0.1.nip.io}:8080
 
       SHEPHERD_REVERSE_PROXY: 1
-      SHEPHERD_REVERSE_PROXY_ADDRESSES: 127.0.0.1,172.17.0.1
+      SHEPHERD_REVERSE_PROXY_ADDRESSES: 127.0.0.1,172.17.0.0/16
       SHEPHERD_REVERSE_PROXY_TRUSTED: 26
 
       # Use jwilder/nginx-proxy for virtual hosts.
@@ -59,8 +60,6 @@ services:
 
   db:
     image: mariadb
-    #ports:
-    #  - "33061:3306"
     environment:
       MYSQL_DATABASE: drupal
       MYSQL_USER: user

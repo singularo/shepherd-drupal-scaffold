@@ -1,0 +1,7 @@
+# Example of an override file. Rename and adjust to enable.
+version: '3'
+services:
+  db:
+    image: mariadb
+    ports:
+      - "33061:3306"
