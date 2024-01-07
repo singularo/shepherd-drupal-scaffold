@@ -59,6 +59,11 @@ if [ ! -f ${DOCKER_COMPOSE_FILE} ]; then
   fi
 fi
 
+# Fix for Specifying a compose file breaks override loading.
+if [ -f "docker-compose.override.yml" ]; then
+  DOCKER_COMPOSE_FILE="${DOCKER_COMPOSE_FILE} -f docker-compose.override.yml"
+fi
+
 # Ensure script is NOT running inside a container - must be run from host.
 if [ -f /.dockerenv ]; then
   error "Inception error - you can't run $0 within a docker container."
@@ -69,7 +74,7 @@ fi
 setup_nginx() {
   # Check if its running/exists already and start if required.
   if docker ps -a --format "{{.Names}}" | grep nginx-proxy > /dev/null; then
-    docker start nginx-proxy > /dev/null
+    docker restart nginx-proxy > /dev/null
   else
     warning "Starting nginx proxy"
     docker run -d -p 8080:80  \
@@ -233,7 +238,6 @@ dsh_pull() {
   ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} pull --ignore-pull-failures
   ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} build
 }
-
 
 dsh_help() {
   printf "\nUsage: dsh COMMAND\n
