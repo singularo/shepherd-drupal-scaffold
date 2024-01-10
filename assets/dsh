@@ -81,7 +81,7 @@ setup_nginx() {
       -v /var/run/docker.sock:/tmp/docker.sock:ro \
       -v ./docker/dsh_proxy.conf:/etc/nginx/conf.d/dsh_proxy.conf \
       --restart always --name nginx-proxy \
-      jwilder/nginx-proxy:latest
+      nginxproxy/nginx-proxy:1.3.1
   fi
 
   if ! docker ps --format "{{.Names}}" --filter "name=^nginx-proxy$" > /dev/null; then
