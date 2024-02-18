@@ -9,12 +9,14 @@ if [ -f .env ]; then
   source .env
 fi
 PROJECT=${PROJECT:-$(basename "${PWD}" | tr -d '.')}
+COMPOSER_PROJECT=${PROJECT}
 export PROJECT
+export COMPOSER_PROJECT
 
 # Work out some other values we need.
 HOST_TYPE=$(uname | tr '[:upper:]' '[:lower:]')
-DOCKER_COMPOSE_FILE="docker-compose.${HOST_TYPE}.yml"
-DOCKER_COMPOSE="docker compose -f"
+COMPOSE_FILE="docker-compose.${HOST_TYPE}.yml"
+DOCKER_COMPOSE="docker-compose --ansi never"
 SHELL_CONTAINER=web
 
 # Set domain default if its not set.
@@ -30,12 +32,12 @@ else
   fi
   # If ssh is setup, try and add it in.
   if [ -n "${SSH_AUTH_SOCK}" ]; then
-    CONTAINER_SSH_AUTH_SOCK=/ssh/$(basename ${SSH_AUTH_SOCK})
-    export CONTAINER_SSH_AUTH_SOCK
+    CONTAINER_SSH_AUTH_SOCK=/ssh/$(basename "${SSH_AUTH_SOCK}")
   fi
 fi
 set -u
 export DOMAIN
+export CONTAINER_SSH_AUTH_SOCK
 
 # Set user variables
 USER_ID=$(id -u)
@@ -49,20 +51,21 @@ warning() { printf "\e[33;01m%s\e[39;49;00m\n" "$1"; }
 error()   { printf "\e[31;01m%s\e[39;49;00m\n" "$1"; }
 
 # Ensure required docker file is at least present
-if [ ! -f ${DOCKER_COMPOSE_FILE} ]; then
+if [ ! -f "${COMPOSE_FILE}" ]; then
   # Ultimately permit overriding repo docker-compose.yml with custom file.
   if [ -f docker-compose.yml ]; then
-    DOCKER_COMPOSE_FILE='docker-compose.yml'
+    COMPOSE_FILE='docker-compose.yml'
   else
-    error "Unable to locate ${DOCKER_COMPOSE_FILE} in current directory."
+    error "Unable to locate ${COMPOSE_FILE} in current directory."
     exit
   fi
 fi
 
 # Fix for Specifying a compose file breaks override loading.
 if [ -f "docker-compose.override.yml" ]; then
-  DOCKER_COMPOSE_FILE="${DOCKER_COMPOSE_FILE} -f docker-compose.override.yml"
+  COMPOSE_FILE="${COMPOSE_FILE}:docker-compose.override.yml"
 fi
+export COMPOSE_FILE
 
 # Ensure script is NOT running inside a container - must be run from host.
 if [ -f /.dockerenv ]; then
@@ -74,7 +77,7 @@ fi
 setup_nginx() {
   # Check if its running/exists already and start if required.
   if docker ps -a --format "{{.Names}}" | grep nginx-proxy > /dev/null; then
-    docker restart nginx-proxy > /dev/null
+    docker start nginx-proxy > /dev/null
   else
     warning "Starting nginx proxy"
     docker run -d -p 8080:80  \
@@ -111,10 +114,16 @@ stop_nginx() {
 # Command: ./dsh start
 # Configures environment then brings up project using docker-compose.yml file.
 dsh_start() {
-  if [[ ! $(docker ps --format "{{.Names}}" --filter "name=^${PROJECT}_web") =~ "${PROJECT}_web" ]]; then
+  if [[ ! $(docker ps --format "{{.Names}}" --filter "name=^${PROJECT}_web") =~ ${PROJECT}_web ]]; then
     notice "Starting containers."
-    ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} up -d
+    # Too slow to leave in # ${DOCKER_COMPOSE} build --parallel
+    if [[ ! $(docker network ls --format "{{.Name}}" --filter "name=^${PROJECT}_default\$") =~ ${PROJECT}_default ]]; then
+      notice "Creating network."
+      docker network create "${PROJECT}_default"
+    fi
     setup_nginx
+
+    ${DOCKER_COMPOSE} up -d
     URL="http://${PROJECT}.${DOMAIN}:8080"
     set +u
     if [ "$1" != "quiet" ]; then
@@ -133,15 +142,15 @@ dsh_shell() {
 
   # Setup docker to run the shell as the current user, thus removing any
   # permission issues.
-  EXISTING_USER=$(${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} id -u www-data | sed -e 's/\r//g')
-  if [ ${EXISTING_USER} != ${USER_ID} ]; then
-    if ! ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} id -u ${USER} >/dev/null 2>&1; then
+  EXISTING_USER=$(${DOCKER_COMPOSE} exec ${SHELL_CONTAINER} id -u www-data | sed -e 's/\r//g')
+  if [ "${EXISTING_USER}" != "${USER_ID}" ]; then
+    if ! ${DOCKER_COMPOSE} exec ${SHELL_CONTAINER} id -u ${USER} >/dev/null 2>&1; then
       notice "Setting up user $USER on web container."
       # Add user with local $USER name to container.
-      ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} adduser --disabled-password --uid ${UID} \
+      ${DOCKER_COMPOSE} exec ${SHELL_CONTAINER} adduser --disabled-password --uid ${UID} \
         --gecos ${USER} --home /home/${USER} ${USER} >/dev/null
       # Allow sudo without password for user.
-      ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec ${SHELL_CONTAINER} /bin/bash -c "echo '${USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/${USER}"
+      ${DOCKER_COMPOSE} exec ${SHELL_CONTAINER} /bin/bash -c "echo '${USER} ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/${USER}"
     fi
   else
     USER=www-data
@@ -189,7 +198,7 @@ dsh_shell() {
   options+=("--env COLUMNS=\"$(tput cols)\"")
   options+=("--env LINES=\"$(tput lines)\"")
 
-  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} exec \
+  ${DOCKER_COMPOSE} exec \
     -u ${USER} \
     ${options[@]} \
     ${SHELL_CONTAINER} ${@:-./dsh_bash}
@@ -200,7 +209,7 @@ dsh_shell() {
 dsh_stop() {
   notice "Stopping containers."
   stop_nginx
-  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} stop
+  ${DOCKER_COMPOSE} stop
 }
 
 # Command: ./dsh down
@@ -208,26 +217,26 @@ dsh_stop() {
 dsh_down() {
   stop_nginx
   notice "Removing containers."
-  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} down -v
+  ${DOCKER_COMPOSE} down -v
 }
 
 # Command: ./dsh purge
 # Stops project, then takes down containers, removes volumes and remove dev image.
 dsh_purge() {
   dsh_down
-  grep image ${DOCKER_COMPOSE_FILE} | awk '{ print $2 }' | xargs docker rmi -f
+  docker rmi -f singularo/s2i-shepherd-drupal-dev
 }
 
 # Command: ./dsh status
 # Shows status information about project containers.
 dsh_status() {
-  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} ps
+  ${DOCKER_COMPOSE} ps
 }
 
 # Command: ./dsh logs
 # Tails logs from web container.
 dsh_logs() {
-  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} logs --tail=100 -f web
+  ${DOCKER_COMPOSE} logs -f web
 }
 
 # Command: ./dsh pull
@@ -235,8 +244,8 @@ dsh_logs() {
 dsh_pull() {
   # docker-compose doesn't resolve sub-dependencies in Dockerfiles.
   docker pull singularo/s2i-shepherd-drupal
-  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} pull --ignore-pull-failures
-  ${DOCKER_COMPOSE} ${DOCKER_COMPOSE_FILE} build
+  ${DOCKER_COMPOSE} pull --ignore-pull-failures
+  ${DOCKER_COMPOSE} build
 }
 
 dsh_help() {
