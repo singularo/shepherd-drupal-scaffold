@@ -1,5 +1,11 @@
 #!/bin/bash
 
+#
+# This file serves as the main entrypoint for development of
+# shepherd based projects. It provides a simple bash shell based
+# development environment.
+#
+
 # `set +e` is used to continue on errors throughout this script.
 set -euo pipefail
 
@@ -224,7 +230,22 @@ dsh_down() {
 # Stops project, then takes down containers, removes volumes and remove dev image.
 dsh_purge() {
   dsh_down
-  docker rmi -f singularo/s2i-shepherd-drupal-dev
+
+  # Get the image lines from the compose files.
+  # shellcheck disable=SC2086
+  RESULTS=$(grep image ${COMPOSE_FILE//:/ })
+
+  # Set the field separator, then convert the results to an array.
+  IFS=$'\n'
+  mapfile -t LINES <<< "${RESULTS}"
+
+  # Loop through the array and delete the images.
+  for LINE in "${LINES[@]}"
+  do
+    # Remove the parts of the line we don't need.
+    IMAGE=${LINE#*image: }
+    docker rmi -f ${IMAGE}
+  done
 }
 
 # Command: ./dsh status
