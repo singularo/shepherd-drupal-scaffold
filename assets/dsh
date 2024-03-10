@@ -32,6 +32,7 @@ if [[ "${HOST_TYPE}" =~ 'darwin' ]]; then
     DOMAIN="127.0.0.1.nip.io"
   fi
   CONTAINER_SSH_AUTH_SOCK=/run/host-services/ssh-auth.sock
+  export CONTAINER_SSH_AUTH_SOCK
 else
   if [ -z "${DOMAIN}" ]; then
     DOMAIN="172.17.0.1.nip.io"
@@ -39,11 +40,11 @@ else
   # If ssh is setup, try and add it in.
   if [ -n "${SSH_AUTH_SOCK}" ]; then
     CONTAINER_SSH_AUTH_SOCK=/ssh/$(basename "${SSH_AUTH_SOCK}")
+    export CONTAINER_SSH_AUTH_SOCK
   fi
 fi
 set -u
 export DOMAIN
-export CONTAINER_SSH_AUTH_SOCK
 
 # Set user variables
 USER_ID=$(id -u)
@@ -193,7 +194,7 @@ dsh_shell() {
     options+=("--env NEWRELIC_LICENSE=${NEWRELIC_LICENSE}")
   fi
 
-  if [ -n "${CONTAINER_AUTH_SOCK}" ]; then
+  if [ -n "${CONTAINER_SSH_AUTH_SOCK}" ]; then
     options+=("--env SSH_AUTH_SOCK=${CONTAINER_SSH_AUTH_SOCK}")
   fi
   set -u
