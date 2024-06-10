@@ -84,7 +84,8 @@ fi
 setup_nginx() {
   # Check if its running/exists already and start if required.
   if docker ps -a --format "{{.Names}}" | grep nginx-proxy > /dev/null; then
-    docker start nginx-proxy > /dev/null
+    warning "Restarting nginx proxy"
+    docker restart nginx-proxy > /dev/null
   else
     warning "Starting nginx proxy"
     docker run -d -p 8080:80  \
