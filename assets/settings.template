@@ -21,6 +21,7 @@ else {
     'namespace' => getenv('DATABASE_NAMESPACE') ?: 'Drupal\\Core\\Database\\Driver\\mysql',
   );
 }
+$settings['file_public_path'] = getenv('PUBLIC_DIR') ?: '/code/web/sites/default/files';
 $settings['file_private_path'] = getenv('PRIVATE_DIR') ?: '/shared/private';
 $settings['file_temp_path'] = getenv('TMP_DIR') ?: '/shared/tmp';
 $settings['hash_salt'] = getenv('HASH_SALT') ?: '{{ HASH_SALT }}';
